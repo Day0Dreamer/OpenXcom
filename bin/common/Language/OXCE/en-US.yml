@@ -420,6 +420,8 @@ en-US:
   STR_UNIFORM_SHOOTING_SPREAD_DESC: "Spread is uniform in all directions and more tight."
   STR_CRASHED_OR_LANDED: "Crashed/Landed button"
   STR_CRASHED_OR_LANDED_DESC: "If enabled, an extra button is displayed on the New Battle screen. Alternatively, press F11 to show/hide the button. {ALT}0>{ALT}Disabled, {ALT}1>{ALT}Crashed, {ALT}2>{ALT}Landed."
+  STR_FIRST_PERSON_VIEW_LIVE_UPDATE: "First-person view live update"
+  STR_FIRST_PERSON_VIEW_LIVE_UPDATE_DESC: "If enabled, the first-person PIP view updates continuously during unit movement. If disabled, it only updates when the unit finishes moving or turning."
 #===================
   STR_GRAPHS_ZOOM_IN: "Zoom In (Graphs)"
   STR_GRAPHS_ZOOM_OUT: "Zoom Out (Graphs)"

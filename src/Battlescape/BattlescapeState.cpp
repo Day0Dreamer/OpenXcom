@@ -899,7 +899,7 @@ void BattlescapeState::think()
 					else if (unit->getDirection() != _pipLastDirection)
 						dirty = true;
 
-					if (dirty && unit->getStatus() == STATUS_STANDING)
+					if (dirty && (Options::oxceFirstPersonViewLiveUpdate || unit->getStatus() == STATUS_STANDING))
 					{
 						_pipDirty = true;
 						_pipLastUnit = unit;

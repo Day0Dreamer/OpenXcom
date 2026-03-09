@@ -118,6 +118,7 @@ OPT int oxceCrashedOrLanded;
 OPT int oxceModValidationLevel;
 OPT bool oxceRawScreenShots;
 OPT bool oxceFirstPersonViewFisheyeProjection;
+OPT bool oxceFirstPersonViewLiveUpdate;
 OPT bool oxceThumbButtons;
 OPT int oxceThrottleMouseMoveEvent;
 OPT bool oxceDisableThinkingProgressBar;
