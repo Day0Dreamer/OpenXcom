@@ -104,7 +104,8 @@ BattlescapeState::BattlescapeState() :
 	_xBeforeMouseScrolling(0), _yBeforeMouseScrolling(0),
 	_totalMouseMoveX(0), _totalMouseMoveY(0), _mouseMovedOverThreshold(0), _mouseOverIcons(false),
 	_autosave(0),
-	_numberOfDirectlyVisibleUnits(0), _numberOfEnemiesTotal(0), _numberOfEnemiesTotalPlusWounded(0)
+	_numberOfDirectlyVisibleUnits(0), _numberOfEnemiesTotal(0), _numberOfEnemiesTotalPlusWounded(0),
+	_pipSurface(0), _pipEnabled(false), _pipDirty(false), _pipLastUnit(0), _pipLastDirection(-1), _pipColorMapValid(false)
 {
 	_save = _game->getSavedGame()->getSavedBattle();
 
@@ -407,6 +408,11 @@ BattlescapeState::BattlescapeState() :
 	_btnShift->initSurfaces(_game->getMod()->getSurfaceSet("Touch")->getFrame(5));
 	_btnRMB->initSurfaces(_game->getMod()->getSurfaceSet("Touch")->getFrame(7));
 	_btnMMB->initSurfaces(_game->getMod()->getSurfaceSet("Touch")->getFrame(9));
+
+	// First-person PIP view overlay
+	_pipSurface = new Surface(128, 128, screenWidth - 132, 4);
+	_pipSurface->setVisible(false);
+	add(_pipSurface);
 
 	// Set up objects
 	_map->init();
@@ -775,6 +781,7 @@ void BattlescapeState::init()
 		{
 			surface->setPalette(_palette);
 		}
+		_pipColorMapValid = false;
 	}
 
 	if (_save->getAmbientSound() != Mod::NO_SOUND)
@@ -877,6 +884,34 @@ void BattlescapeState::think()
 			{
 				_battleGame->handleNonTargetAction();
 				popped = false;
+			}
+			// PIP dirty detection
+			if (_pipEnabled)
+			{
+				BattleUnit *unit = _save->getSelectedUnit();
+				if (unit)
+				{
+					bool dirty = false;
+					if (unit != _pipLastUnit)
+						dirty = true;
+					else if (unit->getPosition() != _pipLastPosition)
+						dirty = true;
+					else if (unit->getDirection() != _pipLastDirection)
+						dirty = true;
+
+					if (dirty && unit->getStatus() == STATUS_STANDING)
+					{
+						_pipDirty = true;
+						_pipLastUnit = unit;
+						_pipLastPosition = unit->getPosition();
+						_pipLastDirection = unit->getDirection();
+					}
+				}
+				if (_pipDirty)
+				{
+					renderPipView();
+					_pipDirty = false;
+				}
 			}
 		}
 		else
@@ -3150,6 +3185,14 @@ inline void BattlescapeState::handle(Action *action)
 				{
 					saveVoxelView();
 				}
+				// PIP first-person view toggle
+				if (key == Options::keyBattlePipView)
+				{
+					_pipEnabled = !_pipEnabled;
+					_pipSurface->setVisible(_pipEnabled);
+					if (_pipEnabled)
+						_pipDirty = true;
+				}
 			}
 		}
 	}
@@ -3414,6 +3457,168 @@ void BattlescapeState::saveVoxelView()
 	}
 	CrossPlatform::writeFile(ss.str(), out);
 	return;
+}
+
+/**
+ * Builds a lookup table mapping (voxel type, shade level) to the nearest palette index.
+ * Called once per palette change.
+ */
+void BattlescapeState::buildPipColorMap()
+{
+	static const unsigned char baseRGB[10][3] =
+	{
+		{  0,   0,   0}, // 0: empty/background
+		{224, 224, 224}, // 1: ground/floor
+		{192, 224, 255}, // 2: west wall
+		{255, 224, 192}, // 3: north wall
+		{128, 255, 128}, // 4: object
+		{192,   0, 255}, // 5: enemy unit
+		{  0,   0,   0}, // 6: unused
+		{255, 255, 255}, // 7: unused
+		{224, 192,   0}, // 8: xcom unit
+		{255,  64, 128}, // 9: neutral unit
+	};
+
+	for (int type = 0; type < 10; ++type)
+	{
+		for (int shade = 0; shade < 8; ++shade)
+		{
+			double factor = shade / 7.0;
+			int tr = (int)(baseRGB[type][0] * factor);
+			int tg = (int)(baseRGB[type][1] * factor);
+			int tb = (int)(baseRGB[type][2] * factor);
+
+			// Find nearest palette entry (skip index 0 for non-black colors)
+			int bestIdx = 0;
+			int bestDist = INT_MAX;
+			for (int i = 0; i < 256; ++i)
+			{
+				int dr = _palette[i].r - tr;
+				int dg = _palette[i].g - tg;
+				int db = _palette[i].b - tb;
+				int d = dr * dr + dg * dg + db * db;
+				if (d < bestDist)
+				{
+					bestDist = d;
+					bestIdx = i;
+				}
+			}
+			_pipColorMap[type][shade] = (Uint8)bestIdx;
+		}
+	}
+	_pipColorMapValid = true;
+}
+
+/**
+ * Renders a first-person voxel raycast view into the PIP surface.
+ * Adapted from saveVoxelView() but outputs to an 8-bit paletted 128x128 surface.
+ */
+void BattlescapeState::renderPipView()
+{
+	if (!_pipColorMapValid)
+		buildPipColorMap();
+
+	BattleUnit *bu = _save->getSelectedUnit();
+	if (!bu) return;
+
+	std::vector<Position> trajectory;
+	Position originVoxel = _save->getTileEngine()->getSightOriginVoxel(bu);
+	double dir = ((double)bu->getDirection() + 4) / 4 * M_PI;
+	bool debugMode = _save->getDebugMode();
+
+	_pipSurface->lock();
+
+	for (int py = 0; py < 128; ++py)
+	{
+		// Map pixel y to the same range as saveVoxelView: -256+32 to 256+32 over 512 pixels
+		// For 128 pixels: step by 4
+		int y = (py - 64 + 8) * 4; // equivalent range: -224 to 288, stepping by 4
+		double ang_y = ((double)y / 640 * M_PI + M_PI / 2);
+
+		for (int px = 0; px < 128; ++px)
+		{
+			int x = (px - 64) * 4; // range: -256 to 252, stepping by 4
+
+			Position targetVoxel;
+			if (Options::oxceFirstPersonViewFisheyeProjection)
+			{
+				double ang_x = ((double)x / 1024) * M_PI + dir;
+				targetVoxel.x = originVoxel.x + (int)(-sin(ang_x) * 1024 * sin(ang_y));
+				targetVoxel.y = originVoxel.y + (int)(cos(ang_x) * 1024 * sin(ang_y));
+				targetVoxel.z = originVoxel.z + (int)(cos(ang_y) * 1024);
+			}
+			else
+			{
+				targetVoxel.x = originVoxel.x + (int)(-sin(dir + M_PI_2) * (x * 4) + cos(dir + M_PI_2) * (1024 + 512));
+				targetVoxel.y = originVoxel.y + (int)(cos(dir + M_PI_2) * (x * 4) + sin(dir + M_PI_2) * (1024 + 512));
+				targetVoxel.z = originVoxel.z + -y * 4;
+			}
+
+			trajectory.clear();
+			int test = _save->getTileEngine()->calculateLineVoxel(originVoxel, targetVoxel, false, &trajectory, bu, nullptr, !debugMode) + 1;
+			bool black = true;
+			double dist = 0;
+			Position hitPos;
+			Tile *tile = 0;
+
+			if (test != 0 && test != 6)
+			{
+				tile = _save->getTile(trajectory.at(0).toTile());
+				if (debugMode
+					|| (tile->isDiscovered(O_WESTWALL) && test == 2)
+					|| (tile->isDiscovered(O_NORTHWALL) && test == 3)
+					|| (tile->isDiscovered(O_FLOOR) && (test == 1 || test == 4))
+					|| test == 5)
+				{
+					if (test == 5)
+					{
+						if (tile->getUnit())
+						{
+							if (tile->getUnit()->getFaction() == FACTION_NEUTRAL) test = 9;
+							else if (tile->getUnit()->getFaction() == FACTION_PLAYER) test = 8;
+						}
+						else
+						{
+							Tile *below = _save->getBelowTile(tile);
+							if (below && below->getUnit())
+							{
+								if (below->getUnit()->getFaction() == FACTION_NEUTRAL) test = 9;
+								else if (below->getUnit()->getFaction() == FACTION_PLAYER) test = 8;
+							}
+						}
+					}
+					hitPos = trajectory.at(0);
+					dist = Position::distance(hitPos, originVoxel);
+					black = false;
+				}
+			}
+
+			if (black)
+			{
+				dist = 0;
+			}
+			else
+			{
+				if (dist > 1000) dist = 1000;
+				if (dist < 1) dist = 1;
+				dist = (1000 - (log(dist)) * 140) / 700;
+
+				if (hitPos.x % 16 == 15) dist *= 0.9;
+				if (hitPos.y % 16 == 15) dist *= 0.9;
+				if (hitPos.z % 24 == 23) dist *= 0.9;
+				if (dist > 1) dist = 1;
+				if (tile) dist *= (16 - (double)tile->getShade()) / 16;
+			}
+
+			int shadeBucket = (int)(dist * 7.0);
+			if (shadeBucket < 0) shadeBucket = 0;
+			if (shadeBucket > 7) shadeBucket = 7;
+			Uint8 color = _pipColorMap[test][shadeBucket];
+			_pipSurface->setPixel(px, py, color);
+		}
+	}
+
+	_pipSurface->unlock();
 }
 
 /**
