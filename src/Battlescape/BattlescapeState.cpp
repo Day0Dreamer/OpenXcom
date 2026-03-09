@@ -899,6 +899,13 @@ void BattlescapeState::think()
 					else if (unit->getDirection() != _pipLastDirection)
 						dirty = true;
 
+					// When live update is on, re-render every frame while unit is moving
+					if (Options::oxceFirstPersonViewLiveUpdate
+						&& (unit->getStatus() == STATUS_WALKING || unit->getStatus() == STATUS_FLYING || unit->getStatus() == STATUS_TURNING))
+					{
+						dirty = true;
+					}
+
 					if (dirty && (Options::oxceFirstPersonViewLiveUpdate || unit->getStatus() == STATUS_STANDING))
 					{
 						_pipDirty = true;
@@ -3523,6 +3530,41 @@ void BattlescapeState::renderPipView()
 
 	std::vector<Position> trajectory;
 	Position originVoxel = _save->getTileEngine()->getSightOriginVoxel(bu);
+
+	// Interpolate origin during walking for smooth movement
+	if (Options::oxceFirstPersonViewLiveUpdate
+		&& (bu->getStatus() == STATUS_WALKING || bu->getStatus() == STATUS_FLYING))
+	{
+		int dir8 = bu->getDirection();
+		int endPhase = 8 + 8 * (dir8 % 2);
+		int phase = bu->getWalkingPhase();
+		double t = (double)phase / endPhase; // 0.0 to ~1.0
+
+		Position from = bu->getLastPosition();
+		Position to = bu->getDestination();
+		// Interpolate in voxel space (16 voxels per tile X/Y)
+		int dx = (to.x - from.x) * 16;
+		int dy = (to.y - from.y) * 16;
+		int dz = (to.z - from.z) * 24; // 24 voxels per tile Z
+
+		// Base origin from the 'from' tile, then add interpolated offset
+		Position fromVoxel = from.toVoxel() + Position(8, 8, 0);
+		Tile *fromTile = _save->getTile(from);
+		if (fromTile)
+			fromVoxel.z += -fromTile->getTerrainLevel();
+		fromVoxel.z += bu->getHeight() + bu->getFloatHeight() - 1;
+		if (bu->isBigUnit())
+		{
+			fromVoxel.x += 8;
+			fromVoxel.y += 8;
+			fromVoxel.z += 1;
+		}
+
+		originVoxel.x = fromVoxel.x + (int)(dx * t);
+		originVoxel.y = fromVoxel.y + (int)(dy * t);
+		originVoxel.z = fromVoxel.z + (int)(dz * t);
+	}
+
 	double dir = ((double)bu->getDirection() + 4) / 4 * M_PI;
 	bool debugMode = _save->getDebugMode();
 
