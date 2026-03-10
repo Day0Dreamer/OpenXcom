@@ -104,7 +104,7 @@ private:
 	BattleUnit *_pipLastUnit;
 	Position _pipLastPosition;
 	int _pipLastDirection;
-	Uint8 _pipColorMap[10][8];
+	Uint8 _pipColorMap[10][32];
 	bool _pipColorMapValid;
 	int _pipCorner; // 0=top-right, 1=top-left, 2=bottom-left, 3=bottom-right
 	int _numpadMoveDir; // held numpad direction for continuous movement (-1 = none)

@@ -3595,9 +3595,9 @@ void BattlescapeState::buildPipColorMap()
 
 	for (int type = 0; type < 10; ++type)
 	{
-		for (int shade = 0; shade < 8; ++shade)
+		for (int shade = 0; shade < 32; ++shade)
 		{
-			double factor = shade / 7.0;
+			double factor = shade / 31.0;
 			int tr = (int)(baseRGB[type][0] * factor);
 			int tg = (int)(baseRGB[type][1] * factor);
 			int tb = (int)(baseRGB[type][2] * factor);
@@ -3822,9 +3822,9 @@ void BattlescapeState::renderPipView()
 				if (test < 10) dist *= dirLight[test];
 			}
 
-			int shadeBucket = (int)(dist * 7.0);
+			int shadeBucket = (int)(dist * 31.0);
 			if (shadeBucket < 0) shadeBucket = 0;
-			if (shadeBucket > 7) shadeBucket = 7;
+			if (shadeBucket > 31) shadeBucket = 31;
 			Uint8 color = _pipColorMap[test][shadeBucket];
 			_pipSurface->setPixel(px, py, color);
 		}
