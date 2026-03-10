@@ -3582,15 +3582,15 @@ void BattlescapeState::buildPipColorMap()
 	static const unsigned char baseRGB[10][3] =
 	{
 		{  0,   0,   0}, // 0: empty/background
-		{210, 190, 150}, // 1: ground/floor (sandstone)
-		{200, 195, 190}, // 2: west wall (light concrete)
-		{170, 165, 160}, // 3: north wall (darker concrete)
-		{135, 155,  95}, // 4: object (olive)
-		{220,  50,  50}, // 5: enemy unit (red)
+		{ 40, 120, 130}, // 1: ground/floor (dark teal)
+		{ 80, 180, 200}, // 2: west wall (medium cyan)
+		{ 60, 150, 190}, // 3: north wall (blue-cyan)
+		{100, 220, 230}, // 4: object (bright cyan)
+		{240,  80,  40}, // 5: enemy unit (red-orange)
 		{  0,   0,   0}, // 6: unused
 		{255, 255, 255}, // 7: unused
-		{ 80, 130, 220}, // 8: xcom unit (blue)
-		{220, 200,  60}, // 9: neutral unit (amber)
+		{ 60, 220,  80}, // 8: xcom unit (bright green)
+		{230, 210,  50}, // 9: neutral unit (yellow)
 	};
 
 	for (int type = 0; type < 10; ++type)
@@ -3816,6 +3816,10 @@ void BattlescapeState::renderPipView()
 				if (hitPos.z % 24 == 23) dist *= 0.9;
 				if (dist > 1) dist = 1;
 				if (tile) dist *= (16 - (double)tile->getShade()) / 16;
+
+				// Directional lighting: shade surfaces by orientation
+				static const double dirLight[] = {1.0, 1.0, 0.85, 0.70, 0.90, 1.0, 1.0, 1.0, 1.0, 1.0};
+				if (test < 10) dist *= dirLight[test];
 			}
 
 			int shadeBucket = (int)(dist * 7.0);
