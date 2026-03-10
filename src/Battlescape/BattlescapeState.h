@@ -106,6 +106,9 @@ private:
 	int _pipLastDirection;
 	Uint8 _pipColorMap[10][8];
 	bool _pipColorMapValid;
+	int _pipCorner; // 0=top-right, 1=top-left, 2=bottom-left, 3=bottom-right
+	/// Updates the PIP surface position based on current corner and resolution.
+	void updatePipPosition();
 	Uint8 _indicatorTextColor, _indicatorGreen, _indicatorBlue, _indicatorPurple;
 	/// Popups a context sensitive list of actions the user can choose from.
 	void handleItemClick(BattleItem *item, bool rightClick);
@@ -271,6 +274,8 @@ public:
 	void renderPipView();
 	/// Builds the PIP palette color map.
 	void buildPipColorMap();
+	/// Cycles the PIP corner position.
+	void cyclePipCorner();
 	/// Handler for the mouse moving over the icons, disables the tile selection cube.
 	void mouseInIcons(Action *action);
 	/// Handler for the mouse going out of the icons, enabling the tile selection cube.

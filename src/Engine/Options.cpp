@@ -365,6 +365,10 @@ void createOptionsOXCE()
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceModValidationLevel", &oxceModValidationLevel, (int)LOG_WARNING));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceRawScreenShots", &oxceRawScreenShots, false));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceFirstPersonViewFisheyeProjection", &oxceFirstPersonViewFisheyeProjection, false));
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxcePipViewEnabled", &oxcePipViewEnabled, false)); // persist PIP on/off state across sessions
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxcePipViewCorner", &oxcePipViewCorner, 0)); // 0=top-right, 1=top-left, 2=bottom-left, 3=bottom-right
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxcePipViewSize", &oxcePipViewSize, 128)); // PIP overlay width and height in logical pixels
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxcePipViewMargin", &oxcePipViewMargin, 0)); // gap between PIP and screen edge in logical pixels
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceThumbButtons", &oxceThumbButtons, true));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceThrottleMouseMoveEvent", &oxceThrottleMouseMoveEvent, 0));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceDisableThinkingProgressBar", &oxceDisableThinkingProgressBar, false));

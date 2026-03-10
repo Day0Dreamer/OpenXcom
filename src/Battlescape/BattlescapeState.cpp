@@ -105,7 +105,8 @@ BattlescapeState::BattlescapeState() :
 	_totalMouseMoveX(0), _totalMouseMoveY(0), _mouseMovedOverThreshold(0), _mouseOverIcons(false),
 	_autosave(0),
 	_numberOfDirectlyVisibleUnits(0), _numberOfEnemiesTotal(0), _numberOfEnemiesTotalPlusWounded(0),
-	_pipSurface(0), _pipEnabled(false), _pipDirty(false), _pipLastUnit(0), _pipLastDirection(-1), _pipColorMapValid(false)
+	_pipSurface(0), _pipEnabled(Options::oxcePipViewEnabled), _pipDirty(Options::oxcePipViewEnabled),
+	_pipLastUnit(0), _pipLastDirection(-1), _pipColorMapValid(false), _pipCorner(Options::oxcePipViewCorner)
 {
 	_save = _game->getSavedGame()->getSavedBattle();
 
@@ -410,9 +411,10 @@ BattlescapeState::BattlescapeState() :
 	_btnMMB->initSurfaces(_game->getMod()->getSurfaceSet("Touch")->getFrame(9));
 
 	// First-person PIP view overlay
-	_pipSurface = new Surface(128, 128, screenWidth - 132, 4);
-	_pipSurface->setVisible(false);
+	_pipSurface = new Surface(Options::oxcePipViewSize, Options::oxcePipViewSize, 0, 0);
+	_pipSurface->setVisible(_pipEnabled);
 	add(_pipSurface);
+	updatePipPosition();
 
 	// Set up objects
 	_map->init();
@@ -3195,10 +3197,19 @@ inline void BattlescapeState::handle(Action *action)
 				// PIP first-person view toggle
 				if (key == Options::keyBattlePipView)
 				{
-					_pipEnabled = !_pipEnabled;
-					_pipSurface->setVisible(_pipEnabled);
-					if (_pipEnabled)
-						_pipDirty = true;
+					if (SDL_GetModState() & KMOD_CTRL)
+					{
+						cyclePipCorner();
+						Options::oxcePipViewCorner = _pipCorner;
+					}
+					else
+					{
+						_pipEnabled = !_pipEnabled;
+						_pipSurface->setVisible(_pipEnabled);
+						Options::oxcePipViewEnabled = _pipEnabled;
+						if (_pipEnabled)
+							_pipDirty = true;
+					}
 				}
 			}
 		}
@@ -3517,6 +3528,65 @@ void BattlescapeState::buildPipColorMap()
 }
 
 /**
+ * Updates the PIP surface position based on current corner and screen resolution.
+ */
+void BattlescapeState::updatePipPosition()
+{
+	int right = Options::baseXResolution - Options::oxcePipViewSize - Options::oxcePipViewMargin;
+
+	// For bottom corners, only avoid the HUD if the PIP overlaps it horizontally
+	int hudLeft = _icons->getX();
+	int hudRight = hudLeft + _icons->getWidth();
+
+	int pipLeft, pipRight;
+	if (_pipCorner == 1 || _pipCorner == 2) // left corners
+	{
+		pipLeft = Options::oxcePipViewMargin;
+		pipRight = Options::oxcePipViewMargin + Options::oxcePipViewSize;
+	}
+	else // right corners
+	{
+		pipLeft = right;
+		pipRight = right + Options::oxcePipViewSize;
+	}
+
+	int bottom;
+	if (pipRight > hudLeft && pipLeft < hudRight)
+		bottom = _icons->getY() - Options::oxcePipViewSize - Options::oxcePipViewMargin;
+	else
+		bottom = Options::baseYResolution - Options::oxcePipViewSize - Options::oxcePipViewMargin;
+
+	switch (_pipCorner)
+	{
+	case 0: // top-right
+		_pipSurface->setX(right);
+		_pipSurface->setY(Options::oxcePipViewMargin);
+		break;
+	case 1: // top-left
+		_pipSurface->setX(Options::oxcePipViewMargin);
+		_pipSurface->setY(Options::oxcePipViewMargin);
+		break;
+	case 2: // bottom-left
+		_pipSurface->setX(Options::oxcePipViewMargin);
+		_pipSurface->setY(bottom);
+		break;
+	case 3: // bottom-right
+		_pipSurface->setX(right);
+		_pipSurface->setY(bottom);
+		break;
+	}
+}
+
+/**
+ * Cycles the PIP corner position (top-right -> top-left -> bottom-left -> bottom-right).
+ */
+void BattlescapeState::cyclePipCorner()
+{
+	_pipCorner = (_pipCorner + 1) % 4;
+	updatePipPosition();
+}
+
+/**
  * Renders a first-person voxel raycast view into the PIP surface.
  * Adapted from saveVoxelView() but outputs to an 8-bit paletted 128x128 surface.
  */
@@ -3570,16 +3640,16 @@ void BattlescapeState::renderPipView()
 
 	_pipSurface->lock();
 
-	for (int py = 0; py < 128; ++py)
+	int halfSize = Options::oxcePipViewSize / 2;
+	int scale = 512 / Options::oxcePipViewSize; // ratio vs original 512x512
+	for (int py = 0; py < Options::oxcePipViewSize; ++py)
 	{
-		// Map pixel y to the same range as saveVoxelView: -256+32 to 256+32 over 512 pixels
-		// For 128 pixels: step by 4
-		int y = (py - 64 + 8) * 4; // equivalent range: -224 to 288, stepping by 4
+		int y = (py - halfSize + halfSize / 8) * scale;
 		double ang_y = ((double)y / 640 * M_PI + M_PI / 2);
 
-		for (int px = 0; px < 128; ++px)
+		for (int px = 0; px < Options::oxcePipViewSize; ++px)
 		{
-			int x = (px - 64) * 4; // range: -256 to 252, stepping by 4
+			int x = (px - halfSize) * scale;
 
 			Position targetVoxel;
 			if (Options::oxceFirstPersonViewFisheyeProjection)
@@ -4286,6 +4356,7 @@ void BattlescapeState::resize(int &dX, int &dY)
 	default:
 		dX = 0;
 		dY = 0;
+		updatePipPosition();
 		return;
 	}
 
@@ -4305,6 +4376,10 @@ void BattlescapeState::resize(int &dX, int &dY)
 		{
 			continue;
 		}
+		if (surf == _pipSurface)
+		{
+			continue;
+		}
 		if (surf != _map && surf != _btnPsi && surf != _btnLaunch && surf != _btnSpecial && surf != _btnSkills && surf != _txtDebug)
 		{
 			surf->setX(surf->getX() + dX / 2);
@@ -4321,6 +4396,7 @@ void BattlescapeState::resize(int &dX, int &dY)
 		pos += dX;
 	}
 
+	updatePipPosition();
 }
 
 /**
