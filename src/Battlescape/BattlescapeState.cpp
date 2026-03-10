@@ -3703,7 +3703,7 @@ void BattlescapeState::renderPipView()
 	{
 		int dir8 = bu->getDirection();
 		int endPhase = 8 + 8 * (dir8 % 2);
-		int phase = bu->getWalkingPhase();
+		int phase = bu->getWalkingPhase() + bu->getDiagonalWalkingPhase();
 		double t = (double)phase / endPhase; // 0.0 to ~1.0
 
 		Position from = bu->getLastPosition();
