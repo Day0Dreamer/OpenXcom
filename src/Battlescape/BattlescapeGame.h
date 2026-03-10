@@ -230,6 +230,10 @@ public:
 	void psiAttackMessage(BattleActionAttack attack, BattleUnit *victim);
 	/// Moves a unit up or down.
 	void moveUpDown(BattleUnit *unit, int dir);
+	/// Moves a unit in a horizontal direction (0-7).
+	void moveDirection(BattleUnit *unit, int dir);
+	/// Turns a unit to face a given direction (0-7).
+	void turnUnit(BattleUnit *unit, int dir);
 	/// Requests the end of the turn (wait for explosions etc to really end the turn).
 	void requestEndTurn(bool askForConfirmation);
 	/// Sets the TU reserved type.

@@ -119,6 +119,8 @@ OPT int oxceModValidationLevel;
 OPT bool oxceRawScreenShots;
 OPT bool oxceFirstPersonViewFisheyeProjection;
 OPT bool oxceFirstPersonViewLiveUpdate;
+OPT bool oxceNumpadUnitMovement;
+OPT bool oxceNumpadTankControls;
 OPT bool oxcePipViewEnabled;
 OPT int oxcePipViewCorner;
 OPT int oxcePipViewSize;

@@ -2117,6 +2117,41 @@ void BattlescapeGame::moveUpDown(BattleUnit *unit, int dir)
 }
 
 /**
+ * Moves a unit in a horizontal direction.
+ * @param unit The unit.
+ * @param dir Direction 0-7 (N, NE, E, SE, S, SW, W, NW).
+ */
+void BattlescapeGame::moveDirection(BattleUnit *unit, int dir)
+{
+	_currentAction.actor = unit;
+	Position dirVec;
+	Pathfinding::directionToVector(dir, &dirVec);
+	_currentAction.target = unit->getPosition() + dirVec;
+	getMap()->setCursorType(CT_NONE);
+	_parentState->getGame()->getCursor()->setVisible(false);
+	if (_save->getSelectedUnit()->isKneeled())
+	{
+		kneel(_save->getSelectedUnit());
+	}
+	_save->getPathfinding()->calculate(_currentAction.actor, _currentAction.target, _currentAction.getMoveType());
+	statePushBack(new UnitWalkBState(this, _currentAction));
+}
+
+/**
+ * Turns a unit to face a given direction.
+ * @param unit The unit.
+ * @param dir Direction 0-7 (N, NE, E, SE, S, SW, W, NW).
+ */
+void BattlescapeGame::turnUnit(BattleUnit *unit, int dir)
+{
+	_currentAction.actor = unit;
+	Position dirVec;
+	Pathfinding::directionToVector(dir, &dirVec);
+	_currentAction.target = unit->getPosition() + dirVec;
+	statePushBack(new UnitTurnBState(this, _currentAction));
+}
+
+/**
  * Requests the end of the turn (waits for explosions etc to really end the turn).
  */
 void BattlescapeGame::requestEndTurn(bool askForConfirmation)

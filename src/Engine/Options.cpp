@@ -500,6 +500,8 @@ void createAdvancedOptionsOXCE()
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceUniformShootingSpread", &oxceUniformShootingSpread, false, "STR_UNIFORM_SHOOTING_SPREAD", "STR_BATTLESCAPE"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceCrashedOrLanded", &oxceCrashedOrLanded, 0, "STR_CRASHED_OR_LANDED", "STR_BATTLESCAPE"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceFirstPersonViewLiveUpdate", &oxceFirstPersonViewLiveUpdate, true, "STR_FIRST_PERSON_VIEW_LIVE_UPDATE", "STR_BATTLESCAPE"));
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxceNumpadUnitMovement", &oxceNumpadUnitMovement, false, "STR_NUMPAD_UNIT_MOVEMENT", "STR_BATTLESCAPE"));
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxceNumpadTankControls", &oxceNumpadTankControls, false, "STR_NUMPAD_TANK_CONTROLS", "STR_BATTLESCAPE"));
 }
 
 void createControlsOXCE()

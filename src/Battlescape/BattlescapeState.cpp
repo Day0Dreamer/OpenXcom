@@ -106,7 +106,8 @@ BattlescapeState::BattlescapeState() :
 	_autosave(0),
 	_numberOfDirectlyVisibleUnits(0), _numberOfEnemiesTotal(0), _numberOfEnemiesTotalPlusWounded(0),
 	_pipSurface(0), _pipEnabled(Options::oxcePipViewEnabled), _pipDirty(Options::oxcePipViewEnabled),
-	_pipLastUnit(0), _pipLastDirection(-1), _pipColorMapValid(false), _pipCorner(Options::oxcePipViewCorner)
+	_pipLastUnit(0), _pipLastDirection(-1), _pipColorMapValid(false), _pipCorner(Options::oxcePipViewCorner),
+	_numpadMoveDir(-1), _numpadTurnDelta(0), _numpadRepeatTime(0)
 {
 	_save = _game->getSavedGame()->getSavedBattle();
 
@@ -920,6 +921,24 @@ void BattlescapeState::think()
 				{
 					renderPipView();
 					_pipDirty = false;
+				}
+			}
+
+			// continuous numpad movement/turning: queue next action when unit finishes
+			if (_numpadMoveDir >= 0 && !_battleGame->isBusy() && playableUnitSelected() && SDL_GetTicks() >= _numpadRepeatTime)
+			{
+				_battleGame->cancelAllActions();
+				if (_numpadTurnDelta != 0)
+				{
+					// tank mode turning: recompute target direction from current facing
+					int dir = (_save->getSelectedUnit()->getDirection() + _numpadTurnDelta + 8) % 8;
+					_numpadMoveDir = dir;
+					_battleGame->turnUnit(_save->getSelectedUnit(), dir);
+					_numpadRepeatTime = SDL_GetTicks() + 200;
+				}
+				else
+				{
+					_battleGame->moveDirection(_save->getSelectedUnit(), _numpadMoveDir);
 				}
 			}
 		}
@@ -3211,6 +3230,83 @@ inline void BattlescapeState::handle(Action *action)
 							_pipDirty = true;
 					}
 				}
+
+				// numpad tank controls (takes priority over absolute mode)
+				if (Options::oxceNumpadTankControls)
+				{
+					BattleUnit *unit = _save->getSelectedUnit();
+					if (unit)
+					{
+						int facing = unit->getDirection();
+						int numpadDir = -1;
+						int turnDelta = 0;
+						switch (key)
+						{
+						case SDLK_KP8: numpadDir = facing; break;                   // forward
+						case SDLK_KP5: numpadDir = (facing + 4) % 8; break;         // backward
+						case SDLK_KP4: numpadDir = (facing - 1 + 8) % 8; turnDelta = -1; break; // turn left
+						case SDLK_KP6: numpadDir = (facing + 1) % 8; turnDelta = 1; break;      // turn right
+						default: break;
+						}
+						if (numpadDir >= 0)
+						{
+							_numpadMoveDir = numpadDir;
+							_numpadTurnDelta = turnDelta;
+							if (turnDelta != 0)
+								_numpadRepeatTime = SDL_GetTicks() + 400; // initial delay before repeat
+							if (!_battleGame->isBusy() && playableUnitSelected())
+							{
+								_battleGame->cancelAllActions();
+								if (turnDelta != 0)
+									_battleGame->turnUnit(unit, numpadDir);
+								else
+									_battleGame->moveDirection(unit, numpadDir);
+							}
+						}
+					}
+				}
+				// numpad absolute movement
+				else if (Options::oxceNumpadUnitMovement)
+				{
+					int numpadDir = -1;
+					switch (key)
+					{
+					case SDLK_KP8: numpadDir = 7; break; // up → NW
+					case SDLK_KP9: numpadDir = 0; break; // up-right → N
+					case SDLK_KP6: numpadDir = 1; break; // right → NE
+					case SDLK_KP3: numpadDir = 2; break; // down-right → E
+					case SDLK_KP2: numpadDir = 3; break; // down → SE
+					case SDLK_KP1: numpadDir = 4; break; // down-left → S
+					case SDLK_KP4: numpadDir = 5; break; // left → SW
+					case SDLK_KP7: numpadDir = 6; break; // up-left → W
+					default: break;
+					}
+					if (numpadDir >= 0)
+					{
+						_numpadMoveDir = numpadDir;
+						_numpadTurnDelta = 0;
+						if (!_battleGame->isBusy() && playableUnitSelected())
+						{
+							_battleGame->cancelAllActions();
+							_battleGame->moveDirection(_save->getSelectedUnit(), numpadDir);
+						}
+					}
+				}
+			}
+		}
+
+		// numpad key release (outside cursor check so releases aren't missed during movement)
+		if (action->getDetails()->type == SDL_KEYUP)
+		{
+			switch (action->getDetails()->key.keysym.sym)
+			{
+			case SDLK_KP8: case SDLK_KP9: case SDLK_KP6: case SDLK_KP3:
+			case SDLK_KP2: case SDLK_KP1: case SDLK_KP4: case SDLK_KP7:
+			case SDLK_KP5:
+				_numpadMoveDir = -1;
+				break;
+			default:
+				break;
 			}
 		}
 	}

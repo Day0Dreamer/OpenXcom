@@ -107,6 +107,9 @@ private:
 	Uint8 _pipColorMap[10][8];
 	bool _pipColorMapValid;
 	int _pipCorner; // 0=top-right, 1=top-left, 2=bottom-left, 3=bottom-right
+	int _numpadMoveDir; // held numpad direction for continuous movement (-1 = none)
+	int _numpadTurnDelta; // tank mode: -1=turning left, +1=turning right, 0=moving
+	Uint32 _numpadRepeatTime; // SDL tick for next allowed repeat
 	/// Updates the PIP surface position based on current corner and resolution.
 	void updatePipPosition();
 	Uint8 _indicatorTextColor, _indicatorGreen, _indicatorBlue, _indicatorPurple;
