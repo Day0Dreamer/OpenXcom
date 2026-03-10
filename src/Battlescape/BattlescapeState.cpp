@@ -3582,15 +3582,15 @@ void BattlescapeState::buildPipColorMap()
 	static const unsigned char baseRGB[10][3] =
 	{
 		{  0,   0,   0}, // 0: empty/background
-		{224, 224, 224}, // 1: ground/floor
-		{192, 224, 255}, // 2: west wall
-		{255, 224, 192}, // 3: north wall
-		{128, 255, 128}, // 4: object
-		{192,   0, 255}, // 5: enemy unit
+		{210, 190, 150}, // 1: ground/floor (sandstone)
+		{200, 195, 190}, // 2: west wall (light concrete)
+		{170, 165, 160}, // 3: north wall (darker concrete)
+		{135, 155,  95}, // 4: object (olive)
+		{220,  50,  50}, // 5: enemy unit (red)
 		{  0,   0,   0}, // 6: unused
 		{255, 255, 255}, // 7: unused
-		{224, 192,   0}, // 8: xcom unit
-		{255,  64, 128}, // 9: neutral unit
+		{ 80, 130, 220}, // 8: xcom unit (blue)
+		{220, 200,  60}, // 9: neutral unit (amber)
 	};
 
 	for (int type = 0; type < 10; ++type)
