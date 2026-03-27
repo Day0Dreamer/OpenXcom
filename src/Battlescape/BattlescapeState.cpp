@@ -888,6 +888,20 @@ void BattlescapeState::think()
 				_battleGame->handleNonTargetAction();
 				popped = false;
 			}
+			// Auto-hide PIP during non-player turns
+			if (_pipEnabled)
+			{
+				bool playerTurn = (_save->getSide() == FACTION_PLAYER || _save->getDebugMode());
+				if (!playerTurn && _pipSurface->getVisible())
+				{
+					_pipSurface->setVisible(false);
+				}
+				else if (playerTurn && !_pipSurface->getVisible())
+				{
+					_pipSurface->setVisible(true);
+					_pipDirty = true;
+				}
+			}
 			// PIP dirty detection
 			if (_pipEnabled)
 			{
