@@ -125,6 +125,7 @@ OPT bool oxcePipViewEnabled;
 OPT int oxcePipViewCorner;
 OPT int oxcePipViewSize;
 OPT int oxcePipViewMargin;
+OPT std::string oxcePipViewBgColor;
 OPT bool oxceThumbButtons;
 OPT int oxceThrottleMouseMoveEvent;
 OPT bool oxceDisableThinkingProgressBar;

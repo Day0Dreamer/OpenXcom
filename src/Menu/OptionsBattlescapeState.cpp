@@ -20,6 +20,7 @@
 #include "../Interface/TextButton.h"
 #include "../Interface/ToggleTextButton.h"
 #include "../Interface/Text.h"
+#include "../Interface/TextEdit.h"
 #include "../Interface/Slider.h"
 #include "../Interface/ComboBox.h"
 #include "../Engine/Action.h"
@@ -65,6 +66,9 @@ OptionsBattlescapeState::OptionsBattlescapeState(OptionsOrigin origin) : Options
 	_btnTooltips = new ToggleTextButton(104, 16, 206, 110);
 	_btnDeaths = new ToggleTextButton(104, 16, 206, 128);
 
+	_txtPipBgColor = new Text(114, 9, 94, 148);
+	_edtPipBgColor = new TextEdit(this, 70, 17, 94, 158);
+
 	add(_txtEdgeScroll, "text", "battlescapeMenu");
 	add(_txtDragScroll, "text", "battlescapeMenu");
 
@@ -88,6 +92,9 @@ OptionsBattlescapeState::OptionsBattlescapeState(OptionsOrigin origin) : Options
 	add(_txtOptions, "text", "battlescapeMenu");
 	add(_btnTooltips, "button", "battlescapeMenu");
 	add(_btnDeaths, "button", "battlescapeMenu");
+
+	add(_txtPipBgColor, "text", "battlescapeMenu");
+	add(_edtPipBgColor, "button", "battlescapeMenu");
 
 	add(_cbxEdgeScroll, "button", "battlescapeMenu");
 	add(_cbxDragScroll, "button", "battlescapeMenu");
@@ -198,6 +205,16 @@ OptionsBattlescapeState::OptionsBattlescapeState(OptionsOrigin origin) : Options
 	_btnDeaths->setTooltip("STR_DEATH_NOTIFICATIONS_DESC");
 	_btnDeaths->onMouseIn((ActionHandler)&OptionsBattlescapeState::txtTooltipIn);
 	_btnDeaths->onMouseOut((ActionHandler)&OptionsBattlescapeState::txtTooltipOut);
+
+	_txtPipBgColor->setText(tr("STR_PIP_BACKGROUND_COLOR"));
+
+	_edtPipBgColor->setAlign(ALIGN_CENTER);
+	_edtPipBgColor->setBig();
+	_edtPipBgColor->setText(Options::oxcePipViewBgColor);
+	_edtPipBgColor->onChange((ActionHandler)&OptionsBattlescapeState::edtPipBgColorChange);
+	_edtPipBgColor->setTooltip("STR_PIP_BACKGROUND_COLOR_DESC");
+	_edtPipBgColor->onMouseIn((ActionHandler)&OptionsBattlescapeState::txtTooltipIn);
+	_edtPipBgColor->onMouseOut((ActionHandler)&OptionsBattlescapeState::txtTooltipOut);
 }
 
 /**
@@ -302,5 +319,13 @@ void OptionsBattlescapeState::btnDeathsClick(Action *)
 	Options::battleNotifyDeath = _btnDeaths->getPressed();
 }
 
+/**
+ * Updates the PIP background color option.
+ * @param action Pointer to an action.
+ */
+void OptionsBattlescapeState::edtPipBgColorChange(Action *)
+{
+	Options::oxcePipViewBgColor = _edtPipBgColor->getText();
+}
 
 }

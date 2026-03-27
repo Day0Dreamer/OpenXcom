@@ -28,6 +28,7 @@ class TextButton;
 class ToggleTextButton;
 class Slider;
 class ComboBox;
+class TextEdit;
 
 /**
  * Screen that lets the user configure various
@@ -44,6 +45,8 @@ private:
 	ToggleTextButton *_btnArrows, *_btnTuCost, *_btnEnergyCost;
 	Text *_txtOptions;
 	ToggleTextButton *_btnTooltips, *_btnDeaths;
+	Text *_txtPipBgColor;
+	TextEdit *_edtPipBgColor;
 public:
 	/// Creates the Battlescape Options state.
 	OptionsBattlescapeState(OptionsOrigin origin);
@@ -67,6 +70,8 @@ public:
 	void btnTooltipsClick(Action *action);
 	/// Handler for clicking the Death Notifications button.
 	void btnDeathsClick(Action *action);
+	/// Handler for changing the PIP background color.
+	void edtPipBgColorChange(Action *action);
 };
 
 }

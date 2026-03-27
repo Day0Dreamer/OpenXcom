@@ -17,6 +17,7 @@
  * along with OpenXcom.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <algorithm>
+#include <cstdio>
 #include <sstream>
 #include <iomanip>
 #include "../fmath.h"
@@ -3593,7 +3594,7 @@ void BattlescapeState::saveVoxelView()
  */
 void BattlescapeState::buildPipColorMap()
 {
-	static const unsigned char baseRGB[10][3] =
+	unsigned char baseRGB[10][3] =
 	{
 		{  0,   0,   0}, // 0: empty/background
 		{ 40, 120, 130}, // 1: ground/floor (dark teal)
@@ -3606,6 +3607,19 @@ void BattlescapeState::buildPipColorMap()
 		{ 60, 220,  80}, // 8: xcom unit (bright green)
 		{230, 210,  50}, // 9: neutral unit (yellow)
 	};
+
+	// Parse optional hex background color (#RRGGBB)
+	const std::string &bgHex = Options::oxcePipViewBgColor;
+	if (bgHex.size() == 7 && bgHex[0] == '#')
+	{
+		unsigned int rgb = 0;
+		if (sscanf(bgHex.c_str() + 1, "%06x", &rgb) == 1)
+		{
+			baseRGB[0][0] = (rgb >> 16) & 0xFF;
+			baseRGB[0][1] = (rgb >> 8) & 0xFF;
+			baseRGB[0][2] = rgb & 0xFF;
+		}
+	}
 
 	for (int type = 0; type < 10; ++type)
 	{
@@ -3635,6 +3649,7 @@ void BattlescapeState::buildPipColorMap()
 		}
 	}
 	_pipColorMapValid = true;
+	_pipLastBgColor = Options::oxcePipViewBgColor;
 }
 
 /**
@@ -3702,7 +3717,7 @@ void BattlescapeState::cyclePipCorner()
  */
 void BattlescapeState::renderPipView()
 {
-	if (!_pipColorMapValid)
+	if (!_pipColorMapValid || _pipLastBgColor != Options::oxcePipViewBgColor)
 		buildPipColorMap();
 
 	BattleUnit *bu = _save->getSelectedUnit();
