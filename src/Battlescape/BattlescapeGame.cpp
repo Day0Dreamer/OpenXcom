@@ -1241,6 +1241,7 @@ void BattlescapeGame::popState()
 	_deleted.push_back(first);
 	_states.pop_front();
 	first->deinit();
+	_parentState->markPipDirty();
 
 	// handle the end of this unit's actions
 	if (action.actor && noActionsPending(action.actor))

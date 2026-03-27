@@ -280,6 +280,8 @@ public:
 	void buildPipColorMap();
 	/// Cycles the PIP corner position.
 	void cyclePipCorner();
+	/// Marks the PIP view as needing a re-render.
+	void markPipDirty();
 	/// Handler for the mouse moving over the icons, disables the tile selection cube.
 	void mouseInIcons(Action *action);
 	/// Handler for the mouse going out of the icons, enabling the tile selection cube.

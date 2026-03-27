@@ -3233,6 +3233,11 @@ inline void BattlescapeState::handle(Action *action)
 				{
 					if (SDL_GetModState() & KMOD_CTRL)
 					{
+						Options::oxceFirstPersonViewFisheyeProjection = !Options::oxceFirstPersonViewFisheyeProjection;
+						_pipDirty = true;
+					}
+					else if (SDL_GetModState() & KMOD_ALT)
+					{
 						cyclePipCorner();
 						Options::oxcePipViewCorner = _pipCorner;
 					}
@@ -3862,6 +3867,14 @@ void BattlescapeState::renderPipView()
 	}
 
 	_pipSurface->unlock();
+}
+
+/**
+ * Marks the PIP view as needing a re-render on the next frame.
+ */
+void BattlescapeState::markPipDirty()
+{
+	_pipDirty = true;
 }
 
 /**

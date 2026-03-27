@@ -422,6 +422,8 @@ en-US:
   STR_CRASHED_OR_LANDED_DESC: "If enabled, an extra button is displayed on the New Battle screen. Alternatively, press F11 to show/hide the button. {ALT}0>{ALT}Disabled, {ALT}1>{ALT}Crashed, {ALT}2>{ALT}Landed."
   STR_FIRST_PERSON_VIEW_LIVE_UPDATE: "First-person view live update"
   STR_FIRST_PERSON_VIEW_LIVE_UPDATE_DESC: "If enabled, the first-person PIP view updates continuously during unit movement. If disabled, it only updates when the unit finishes moving or turning."
+  STR_FIRST_PERSON_VIEW_FISHEYE: "First-person view fisheye projection"
+  STR_FIRST_PERSON_VIEW_FISHEYE_DESC: "If enabled, the first-person PIP view uses a spherical fisheye projection with a wide field of view. If disabled, it uses a flat rectilinear projection."
   STR_NUMPAD_UNIT_MOVEMENT: "Numpad unit movement"
   STR_NUMPAD_UNIT_MOVEMENT_DESC: "If enabled, numpad keys (1-9) move the selected unit one tile in the corresponding direction. Hold a key to keep walking."
   STR_NUMPAD_TANK_CONTROLS: "Numpad tank controls"

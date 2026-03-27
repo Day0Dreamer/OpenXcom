@@ -364,7 +364,6 @@ void createOptionsOXCE()
 	// OXCE hidden
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceModValidationLevel", &oxceModValidationLevel, (int)LOG_WARNING));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceRawScreenShots", &oxceRawScreenShots, false));
-	_info.push_back(OptionInfo(OPTION_OXCE, "oxceFirstPersonViewFisheyeProjection", &oxceFirstPersonViewFisheyeProjection, false));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxcePipViewEnabled", &oxcePipViewEnabled, false)); // persist PIP on/off state across sessions
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxcePipViewCorner", &oxcePipViewCorner, 0)); // 0=top-right, 1=top-left, 2=bottom-left, 3=bottom-right
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxcePipViewSize", &oxcePipViewSize, 128)); // PIP overlay width and height in logical pixels
@@ -500,6 +499,7 @@ void createAdvancedOptionsOXCE()
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceUniformShootingSpread", &oxceUniformShootingSpread, false, "STR_UNIFORM_SHOOTING_SPREAD", "STR_BATTLESCAPE"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceCrashedOrLanded", &oxceCrashedOrLanded, 0, "STR_CRASHED_OR_LANDED", "STR_BATTLESCAPE"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceFirstPersonViewLiveUpdate", &oxceFirstPersonViewLiveUpdate, true, "STR_FIRST_PERSON_VIEW_LIVE_UPDATE", "STR_BATTLESCAPE"));
+	_info.push_back(OptionInfo(OPTION_OXCE, "oxceFirstPersonViewFisheyeProjection", &oxceFirstPersonViewFisheyeProjection, false, "STR_FIRST_PERSON_VIEW_FISHEYE", "STR_BATTLESCAPE"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceNumpadUnitMovement", &oxceNumpadUnitMovement, false, "STR_NUMPAD_UNIT_MOVEMENT", "STR_BATTLESCAPE"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxceNumpadTankControls", &oxceNumpadTankControls, false, "STR_NUMPAD_TANK_CONTROLS", "STR_BATTLESCAPE"));
 	_info.push_back(OptionInfo(OPTION_OXCE, "oxcePipViewBgColor", &oxcePipViewBgColor, "", "STR_PIP_BACKGROUND_COLOR", "STR_BATTLESCAPE"));
