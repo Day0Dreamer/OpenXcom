@@ -157,6 +157,7 @@ set ( engine_src
   Engine/OptionInfo.cpp
   Engine/Options.cpp
   Engine/Palette.cpp
+  Engine/RemoteServer.cpp
   Engine/RNG.cpp
   Engine/Scalers/hq2x.cpp
   Engine/Scalers/hq3x.cpp
@@ -457,7 +458,9 @@ set ( c_src
   ../libs/miniz/miniz.c
 )
 set_property ( SOURCE ${c_src} APPEND PROPERTY COMPILE_DEFINITIONS MINIZ_NO_STDIO )
-set_property ( SOURCE Engine/Scalers/xbrz.cpp APPEND_STRING PROPERTY COMPILE_FLAGS -Wno-unused\ )
+if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
+  set_property ( SOURCE Engine/Scalers/xbrz.cpp APPEND_STRING PROPERTY COMPILE_FLAGS -Wno-unused\ )
+endif ()
 
 set ( data_install_dir bin )
 if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_BUILD_TYPE}" STREQUAL "Debug" )
@@ -599,6 +602,12 @@ endif ()
 
 add_executable ( openxcom  ${application_type} ${openxcom_src} ${openxcom_icon} )
 
+# The .rc file already embeds a manifest; prevent CMake/linker from generating a duplicate
+if ( MSVC )
+  set_property ( TARGET openxcom PROPERTY VS_USER_PROPS "" )
+  target_link_options ( openxcom PRIVATE "/MANIFEST:NO" )
+endif ()
+
 if ( EMBED_ASSETS )
   add_dependencies(openxcom zips)
 endif ()
@@ -621,8 +630,10 @@ if (${CMAKE_SYSTEM_NAME} MATCHES FreeBSD OR ${CMAKE_SYSTEM_NAME} MATCHES NetBSD 
 endif ()
 
 if (WIN32)
-  set(CMAKE_EXE_LINKER_FLAGS -Wl,--export-all-symbols)
-  set(WIN32_LIBS imagehlp dbghelp)
+  if (MINGW)
+    set(CMAKE_EXE_LINKER_FLAGS -Wl,--export-all-symbols)
+  endif ()
+  set(WIN32_LIBS imagehlp dbghelp ws2_32)
 endif(WIN32)
 
 target_link_libraries ( openxcom ${system_libs} ${PKG_DEPS_LDFLAGS} ${EXTRA_XCOM_LIBS} ${WIN32_LIBS} )

@@ -34,6 +34,7 @@ class ModInfo;
 class FpsCounter;
 class Action;
 class GeoscapeState;
+class RemoteServer;
 
 /**
  * The core of the game engine, manages the game's entire contents and structure.
@@ -58,6 +59,7 @@ private:
 	int _timeUntilNextFrame;
 	bool _ctrl, _alt, _shift, _rmb, _mmb;
 	int _scrollStep;
+	RemoteServer* _remoteServer;
 	static const double VOLUME_GRADIENT;
 
 public:

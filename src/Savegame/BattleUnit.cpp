@@ -1511,6 +1511,15 @@ int BattleUnit::getHealth() const
 }
 
 /**
+ * Sets the unit's health, clamped to [0, maxHealth].
+ * @param hp New health value.
+ */
+void BattleUnit::setHealth(int hp)
+{
+	_health = std::max(0, std::min(hp, (int)_stats.health));
+}
+
+/**
  * Returns the soldier's amount of mana.
  * @return Mana.
  */

@@ -321,6 +321,8 @@ public:
 	int getEnergy() const;
 	/// Gets the unit's health.
 	int getHealth() const;
+	/// Sets the unit's health, clamped to [0, maxHealth].
+	void setHealth(int hp);
 	/// Gets the unit's mana.
 	int getMana() const;
 	/// Gets the unit's bravery.

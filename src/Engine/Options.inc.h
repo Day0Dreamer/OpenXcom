@@ -134,6 +134,8 @@ OPT bool oxceEmbeddedOnly;
 OPT bool oxceListVFSContents;
 OPT bool oxceEnablePaletteFlickerFix;
 OPT bool oxceRecommendedOptionsWereSet;
+OPT bool oxceRemoteServerEnabled;
+OPT int oxceRemoteServerPort;
 OPT std::string password;
 
 // OXCE hidden, but moddable via fixedUserOptions and/or recommendedUserOptions
