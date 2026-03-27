@@ -2194,6 +2194,7 @@ void BattlescapeState::drawHandsItems()
  */
 void BattlescapeState::updateSoldierInfo(bool checkFOV)
 {
+	_map->invalidateOverlayCache();
 	BattleUnit *battleUnit = _save->getSelectedUnit();
 
 	for (int i = 0; i < VISIBLE_MAX; ++i)
@@ -2901,10 +2902,77 @@ inline void BattlescapeState::handle(Action *action)
 				{
 					_map->toggleDebugVisionMode();
 				}
-				// "Pause" - toggle unit FOV visualization
+				// "Pause" - toggle unit FOV visualization (darken unseen tiles)
 				else if (key == SDLK_PAUSE)
 				{
 					_map->toggleUnitFOV();
+					_txtTooltip->setText(_map->getShowUnitFOV() ? "FOV cone enabled" : "FOV cone disabled");
+				}
+				// "shift-`" - toggle raw voxel-traced LOS trajectory lines
+				else if (key == SDLK_BACKQUOTE && shiftPressed)
+				{
+					_map->toggleLOSTrajectories();
+					_txtTooltip->setText(_map->getShowLOSTrajectories() ? "LOS traces enabled" : "LOS traces disabled");
+				}
+				// "shift-1" - cover quality LOS lines
+				else if (key == SDLK_1 && shiftPressed)
+				{
+					_map->toggleCoverQuality();
+					_txtTooltip->setText(_map->getShowCoverQuality() ? "Cover quality enabled" : "Cover quality disabled");
+				}
+				// "shift-2" - blocked LOS to all enemies
+				else if (key == SDLK_2 && shiftPressed)
+				{
+					_map->toggleBlockedLOS();
+					_txtTooltip->setText(_map->getShowBlockedLOS() ? "Blocked LOS enabled" : "Blocked LOS disabled");
+				}
+				// "shift-3" - hit probability overlay
+				else if (key == SDLK_3 && shiftPressed)
+				{
+					_map->toggleHitProbability();
+					_txtTooltip->setText(_map->getShowHitProbability() ? "Hit probability enabled" : "Hit probability disabled");
+				}
+				// "shift-4" - corridor of fire tile highlighting
+				else if (key == SDLK_4 && shiftPressed)
+				{
+					_map->toggleCorridorOfFire();
+					_txtTooltip->setText(_map->getShowCorridorOfFire() ? "Corridor of fire enabled" : "Corridor of fire disabled");
+				}
+				// "shift-5" - crossfire visualization (hover over enemy)
+				else if (key == SDLK_5 && shiftPressed)
+				{
+					_map->toggleCrossfire();
+					_txtTooltip->setText(_map->getShowCrossfire() ? "Crossfire enabled" : "Crossfire disabled");
+				}
+				// "shift-6" - danger zone
+				else if (key == SDLK_6 && shiftPressed)
+				{
+					_map->toggleDangerZone();
+					_txtTooltip->setText(_map->getShowDangerZone() ? "Danger zone enabled" : "Danger zone disabled");
+				}
+				// "shift-7" - best cover finder
+				else if (key == SDLK_7 && shiftPressed)
+				{
+					_map->toggleBestCover();
+					_txtTooltip->setText(_map->getShowBestCover() ? "Best cover enabled" : "Best cover disabled");
+				}
+				// "shift-8" - smoke effectiveness preview
+				else if (key == SDLK_8 && shiftPressed)
+				{
+					_map->toggleSmokePreview();
+					_txtTooltip->setText(_map->getShowSmokePreview() ? "Smoke preview enabled" : "Smoke preview disabled");
+				}
+				// "shift-9" - reaction fire risk
+				else if (key == SDLK_9 && shiftPressed)
+				{
+					_map->toggleReactionRisk();
+					_txtTooltip->setText(_map->getShowReactionRisk() ? "Reaction risk enabled" : "Reaction risk disabled");
+				}
+				// "shift-0" - overwatch lanes
+				else if (key == SDLK_0 && shiftPressed)
+				{
+					_map->toggleOverwatchLanes();
+					_txtTooltip->setText(_map->getShowOverwatchLanes() ? "Overwatch lanes enabled" : "Overwatch lanes disabled");
 				}
 				// "ctrl-shift-Del" - clear TUs for all allied units
 				else if (key == SDLK_DELETE && ctrlPressed && shiftPressed)
