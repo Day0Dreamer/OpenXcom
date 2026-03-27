@@ -426,6 +426,8 @@ en-US:
   STR_NUMPAD_UNIT_MOVEMENT_DESC: "If enabled, numpad keys (1-9) move the selected unit one tile in the corresponding direction. Hold a key to keep walking."
   STR_NUMPAD_TANK_CONTROLS: "Numpad tank controls"
   STR_NUMPAD_TANK_CONTROLS_DESC: "If enabled, numpad controls the selected unit relative to its facing: KP8=forward, KP5=backward, KP4=turn left 45 degrees, KP6=turn right 45 degrees. Hold a key to keep moving or turning. Overrides numpad unit movement."
+  STR_PIP_BACKGROUND_COLOR: "PIP background color"
+  STR_PIP_BACKGROUND_COLOR_DESC: "Background color for the first-person PIP view as a hex code (e.g. #1A2B3C). Click to edit, press Enter to confirm. Leave empty for black."
 #===================
   STR_GRAPHS_ZOOM_IN: "Zoom In (Graphs)"
   STR_GRAPHS_ZOOM_OUT: "Zoom Out (Graphs)"

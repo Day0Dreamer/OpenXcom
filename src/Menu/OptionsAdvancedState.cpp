@@ -25,6 +25,7 @@
 #include "../Interface/Window.h"
 #include "../Interface/Text.h"
 #include "../Interface/TextButton.h"
+#include "../Interface/TextEdit.h"
 #include "../Interface/TextList.h"
 #include "../Engine/Options.h"
 #include "../Engine/Action.h"
@@ -47,6 +48,7 @@ OptionsAdvancedState::OptionsAdvancedState(OptionsOrigin origin) : OptionsBaseSt
 	_btnOXCE = new TextButton(70, 16, 168, 8);
 	_btnOTHER = new TextButton(70, 16, 242, 8);
 	_lstOptions = new TextList(200, 120, 94, 26);
+	_edtString = new TextEdit(this, 50, 9, 0, 0);
 
 	_owner = _btnOXC;
 
@@ -77,6 +79,8 @@ OptionsAdvancedState::OptionsAdvancedState(OptionsOrigin origin) : OptionsBaseSt
 		_greyedOutColor = _game->getMod()->getInterface("battlescape")->getElement("disabledUserOption")->color;
 		add(_lstOptions, "optionLists", "battlescape");
 	}
+
+	add(_edtString);
 
 	centerAllSurfaces();
 
@@ -115,6 +119,11 @@ OptionsAdvancedState::OptionsAdvancedState(OptionsOrigin origin) : OptionsBaseSt
 	_lstOptions->onMouseOut((ActionHandler)&OptionsAdvancedState::lstOptionsMouseOut);
 
 	_colorGroup = _lstOptions->getSecondaryColor();
+
+	_edtString->setColor(_lstOptions->getSecondaryColor());
+	_edtString->setVisible(false);
+	_edtString->onEnter((ActionHandler)&OptionsAdvancedState::edtStringEnter);
+	_editRow = -1;
 
 	for (const auto& optionInfo : Options::getOptionInfo())
 	{
@@ -260,6 +269,10 @@ void OptionsAdvancedState::addSettings(const std::vector<OptionInfo> &settings)
 			std::ostringstream ss;
 			ss << *optionInfo.asInt();
 			value = ss.str();
+		}
+		else if (optionInfo.type() == OPTION_STRING)
+		{
+			value = *optionInfo.asString();
 		}
 		_lstOptions->addRow(2, name.c_str(), value.c_str());
 		// grey out fixed options
@@ -447,6 +460,19 @@ void OptionsAdvancedState::lstOptionsClick(Action *action)
 		ss << *i;
 		settingText = ss.str();
 	}
+	else if (setting->type() == OPTION_STRING)
+	{
+		// Open inline text editor for string options
+		_editRow = sel;
+		_edtString->setText(*setting->asString());
+		_edtString->setX(_lstOptions->getColumnX(1));
+		_edtString->setY(_lstOptions->getRowY(sel));
+		_edtString->setVisible(true);
+		_edtString->setFocus(true);
+		_lstOptions->setScrolling(false);
+		_lstOptions->setCellText(sel, 1, "");
+		return;
+	}
 	_lstOptions->setCellText(sel, 1, settingText);
 }
 
@@ -460,6 +486,20 @@ void OptionsAdvancedState::lstOptionsMouseOver(Action *)
 		desc = tr(setting->description() + "_DESC");
 	}
 	_txtTooltip->setText(desc);
+}
+
+void OptionsAdvancedState::edtStringEnter(Action *)
+{
+	std::string value = _edtString->getText();
+	OptionInfo *setting = getSetting(_editRow);
+	if (setting)
+	{
+		*setting->asString() = value;
+	}
+	_lstOptions->setCellText(_editRow, 1, value);
+	_edtString->setVisible(false);
+	_lstOptions->setScrolling(true);
+	_editRow = -1;
 }
 
 void OptionsAdvancedState::lstOptionsMouseOut(Action *)

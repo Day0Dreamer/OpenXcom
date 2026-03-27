@@ -25,6 +25,7 @@ namespace OpenXcom
 {
 
 class TextButton;
+class TextEdit;
 class TextList;
 
 /**
@@ -37,6 +38,8 @@ private:
 	TextButton *_btnOXC, *_btnOXCE, *_btnOTHER;
 	TextButton *_owner;
 	TextList *_lstOptions;
+	TextEdit *_edtString;
+	int _editRow;
 	bool _isTFTD;
 	Uint8 _colorGroup, _greyedOutColor;
 	std::vector<OptionInfo> _settingsGeneral[OPTION_OWNER_MAX];
@@ -74,6 +77,8 @@ public:
 	void lstOptionsMouseOut(Action *action);
 	/// Handler for clicking buttons.
 	void btnGroupPress(Action* action);
+	/// Handler for pressing Enter in the string editor.
+	void edtStringEnter(Action *action);
 
 };
 

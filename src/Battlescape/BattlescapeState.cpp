@@ -3608,12 +3608,13 @@ void BattlescapeState::buildPipColorMap()
 		{230, 210,  50}, // 9: neutral unit (yellow)
 	};
 
-	// Parse optional hex background color (#RRGGBB)
+	// Parse optional hex background color (#RRGGBB or RRGGBB)
 	const std::string &bgHex = Options::oxcePipViewBgColor;
-	if (bgHex.size() == 7 && bgHex[0] == '#')
+	size_t offset = (!bgHex.empty() && bgHex[0] == '#') ? 1 : 0;
+	if (bgHex.size() - offset == 6)
 	{
 		unsigned int rgb = 0;
-		if (sscanf(bgHex.c_str() + 1, "%06x", &rgb) == 1)
+		if (sscanf(bgHex.c_str() + offset, "%06x", &rgb) == 1)
 		{
 			baseRGB[0][0] = (rgb >> 16) & 0xFF;
 			baseRGB[0][1] = (rgb >> 8) & 0xFF;
@@ -3630,10 +3631,10 @@ void BattlescapeState::buildPipColorMap()
 			int tg = (int)(baseRGB[type][1] * factor);
 			int tb = (int)(baseRGB[type][2] * factor);
 
-			// Find nearest palette entry (skip index 0 for non-black colors)
-			int bestIdx = 0;
+			// Find nearest palette entry (skip index 0, it's the transparent color key)
+			int bestIdx = 1;
 			int bestDist = INT_MAX;
-			for (int i = 0; i < 256; ++i)
+			for (int i = 1; i < 256; ++i)
 			{
 				int dr = _palette[i].r - tr;
 				int dg = _palette[i].g - tg;
@@ -3832,7 +3833,8 @@ void BattlescapeState::renderPipView()
 
 			if (black)
 			{
-				dist = 0;
+				test = 0; // use background color entry
+				dist = 1; // full brightness
 			}
 			else
 			{
