@@ -107,7 +107,7 @@ BattlescapeState::BattlescapeState() :
 	_autosave(0),
 	_numberOfDirectlyVisibleUnits(0), _numberOfEnemiesTotal(0), _numberOfEnemiesTotalPlusWounded(0),
 	_pipSurface(0), _pipEnabled(Options::oxcePipViewEnabled), _pipDirty(Options::oxcePipViewEnabled),
-	_pipLastUnit(0), _pipLastDirection(-1), _pipColorMapValid(false), _pipCorner(Options::oxcePipViewCorner),
+	_pipLastUnit(0), _pipLastDirection(-1), _pipSmoothAngle(0.0), _pipSmoothAngleValid(false), _pipColorMapValid(false), _pipCorner(Options::oxcePipViewCorner),
 	_numpadMoveDir(-1), _numpadTurnDelta(0), _numpadRepeatTime(0)
 {
 	_save = _game->getSavedGame()->getSavedBattle();
@@ -896,6 +896,7 @@ void BattlescapeState::think()
 				if (!playerTurn && _pipSurface->getVisible())
 				{
 					_pipSurface->setVisible(false);
+					_pipSmoothAngleValid = false;
 				}
 				else if (playerTurn && !_pipSurface->getVisible())
 				{
@@ -922,6 +923,29 @@ void BattlescapeState::think()
 						&& (unit->getStatus() == STATUS_WALKING || unit->getStatus() == STATUS_FLYING || unit->getStatus() == STATUS_TURNING))
 					{
 						dirty = true;
+					}
+
+					// Smooth angle interpolation for turning
+					double targetAngle = ((double)unit->getDirection() + 4) / 4.0 * M_PI;
+					if (!_pipSmoothAngleValid || unit != _pipLastUnit)
+					{
+						_pipSmoothAngle = targetAngle;
+						_pipSmoothAngleValid = true;
+					}
+					else
+					{
+						double delta = targetAngle - _pipSmoothAngle;
+						while (delta > M_PI) delta -= 2.0 * M_PI;
+						while (delta < -M_PI) delta += 2.0 * M_PI;
+						if (fabs(delta) < 0.01)
+						{
+							_pipSmoothAngle = targetAngle;
+						}
+						else
+						{
+							_pipSmoothAngle += delta * 0.35;
+							dirty = true;
+						}
 					}
 
 					if (dirty && (Options::oxceFirstPersonViewLiveUpdate || unit->getStatus() == STATUS_STANDING))
@@ -3319,6 +3343,7 @@ inline void BattlescapeState::handle(Action *action)
 						_pipEnabled = !_pipEnabled;
 						_pipSurface->setVisible(_pipEnabled);
 						Options::oxcePipViewEnabled = _pipEnabled;
+						if (!_pipEnabled) _pipSmoothAngleValid = false;
 						if (_pipEnabled)
 							_pipDirty = true;
 					}
@@ -3839,7 +3864,7 @@ void BattlescapeState::renderPipView()
 		originVoxel.z = fromVoxel.z + (int)(dz * t);
 	}
 
-	double dir = ((double)bu->getDirection() + 4) / 4 * M_PI;
+	double dir = _pipSmoothAngleValid ? _pipSmoothAngle : ((double)bu->getDirection() + 4) / 4.0 * M_PI;
 	bool debugMode = _save->getDebugMode();
 
 	_pipSurface->lock();

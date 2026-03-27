@@ -104,6 +104,8 @@ private:
 	BattleUnit *_pipLastUnit;
 	Position _pipLastPosition;
 	int _pipLastDirection;
+	double _pipSmoothAngle;
+	bool _pipSmoothAngleValid;
 	Uint8 _pipColorMap[10][32];
 	bool _pipColorMapValid;
 	std::string _pipLastBgColor;
