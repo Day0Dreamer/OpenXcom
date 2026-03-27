@@ -108,7 +108,7 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) 
 	_game(game), _isTFTD(false), _arrow(0), _anyIndicator(false), _isAltPressed(false), _isCtrlPressed(false),
 	_selectorX(0), _selectorY(0), _mouseX(0), _mouseY(0), _cursorType(CT_NORMAL), _cursorSize(1), _animFrame(0),
 	_projectile(0), _followProjectile(true), _projectileInFOV(false), _explosionInFOV(false), _launch(false), _visibleMapHeight(visibleMapHeight),
-	_unitDying(false), _smoothingEngaged(false), _flashScreen(false), _bgColor(15), _projectileSet(0), _showObstacles(false), _showInfoOnCursor(false)
+	_unitDying(false), _smoothingEngaged(false), _flashScreen(false), _bgColor(15), _projectileSet(0), _showObstacles(false), _showUnitFOV(false), _showInfoOnCursor(false)
 {
 	// TODO: extract to a better place later
 	for (const auto& pair : Options::mods)
@@ -924,6 +924,15 @@ void Map::drawTerrain(Surface *surface)
 							if (tile->isObstacle())
 							{
 								obstacleShade = getShadePulseForFrame(tileShade, _animFrame);
+							}
+						}
+						if (_showUnitFOV)
+						{
+							BattleUnit *selectedUnit = _save->getSelectedUnit();
+							if (selectedUnit && !selectedUnit->hasVisibleTile(tile))
+							{
+								tileShade = 16;
+								obstacleShade = 16;
 							}
 						}
 					}
@@ -2617,6 +2626,15 @@ void Map::disableObstacles(void)
 	{
 		_obstacleTimer->stop();
 	}
+}
+
+/**
+ * Toggles unit FOV visualization. When active, tiles outside the
+ * selected unit's field of view are rendered fully dark.
+ */
+void Map::toggleUnitFOV()
+{
+	_showUnitFOV = !_showUnitFOV;
 }
 
 }

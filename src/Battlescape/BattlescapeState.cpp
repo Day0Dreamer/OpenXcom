@@ -2901,6 +2901,11 @@ inline void BattlescapeState::handle(Action *action)
 				{
 					_map->toggleDebugVisionMode();
 				}
+				// "Pause" - toggle unit FOV visualization
+				else if (key == SDLK_PAUSE)
+				{
+					_map->toggleUnitFOV();
+				}
 				// "ctrl-shift-Del" - clear TUs for all allied units
 				else if (key == SDLK_DELETE && ctrlPressed && shiftPressed)
 				{

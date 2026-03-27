@@ -112,6 +112,7 @@ private:
 	int _hostileBarColor, _neutralBarColor, _borderBarColor;
 	const std::vector<Uint8> *_transparencies;
 	bool _showObstacles;
+	bool _showUnitFOV;
 	bool _showInfoOnCursor;
 public:
 	/// Creates a new map at the specified position and size.
@@ -217,6 +218,10 @@ public:
 	void enableObstacles();
 	/// Disables obstacle markers.
 	void disableObstacles();
+	/// Toggles unit FOV visualization.
+	void toggleUnitFOV();
+	/// Gets whether unit FOV visualization is active.
+	bool getShowUnitFOV() const { return _showUnitFOV; }
 };
 
 }
