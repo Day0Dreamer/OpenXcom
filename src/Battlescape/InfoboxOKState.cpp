@@ -34,14 +34,23 @@ namespace OpenXcom
  * @param game Pointer to the core game.
  * @param msg Message string.
  */
-InfoboxOKState::InfoboxOKState(const std::string &msg)
+InfoboxOKState::InfoboxOKState(const std::string &msg, bool largeReport)
 {
 	_screen = false;
 
 	// Create objects
-	_frame = new Frame(261, 89, 30, 48);
-	_btnOk = new TextButton(120, 18, 100, 112);
-	_txtTitle = new Text(255, 61, 33, 51);
+	if (largeReport)
+	{
+		_frame = new Frame(300, 170, 10, 10);
+		_btnOk = new TextButton(120, 18, 100, 158);
+		_txtTitle = new Text(290, 140, 15, 14);
+	}
+	else
+	{
+		_frame = new Frame(261, 89, 30, 48);
+		_btnOk = new TextButton(120, 18, 100, 112);
+		_txtTitle = new Text(255, 61, 33, 51);
+	}
 
 	// Set palette
 	_game->getSavedGame()->getSavedBattle()->setPaletteByDepth(this);
@@ -62,9 +71,18 @@ InfoboxOKState::InfoboxOKState(const std::string &msg)
 	_btnOk->onKeyboardPress((ActionHandler)&InfoboxOKState::btnOkClick, Options::keyCancel);
 	_btnOk->setHighContrast(true);
 
-	_txtTitle->setBig();
-	_txtTitle->setAlign(ALIGN_CENTER);
-	_txtTitle->setVerticalAlign(ALIGN_MIDDLE);
+	if (largeReport)
+	{
+		_txtTitle->setSmall();
+		_txtTitle->setAlign(ALIGN_LEFT);
+		_txtTitle->setVerticalAlign(ALIGN_TOP);
+	}
+	else
+	{
+		_txtTitle->setBig();
+		_txtTitle->setAlign(ALIGN_CENTER);
+		_txtTitle->setVerticalAlign(ALIGN_MIDDLE);
+	}
 	_txtTitle->setHighContrast(true);
 	_txtTitle->setWordWrap(true);
 	_txtTitle->setText(msg);

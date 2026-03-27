@@ -36,6 +36,8 @@
 #include "BattlescapeGame.h"
 #include "WarningMessage.h"
 #include "InfoboxState.h"
+#include "InfoboxOKState.h"
+#include "Projectile.h"
 #include "NoExperienceState.h"
 #include "ExperienceOverviewState.h"
 #include "TurnDiaryState.h"
@@ -58,6 +60,7 @@
 #include "../Engine/Script.h"
 #include "../Engine/Logger.h"
 #include "../Engine/Timer.h"
+#include "../Engine/RNG.h"
 #include "../Engine/CrossPlatform.h"
 #include "../Interface/Cursor.h"
 #include "../Interface/Text.h"
@@ -2734,6 +2737,169 @@ void BattlescapeState::warningLongRaw(const std::string &message)
 }
 
 /**
+ * Runs a Monte Carlo shot simulation and displays results in a dialog.
+ * Simulates N shots using the real trajectory pipeline (applyAccuracy + calculateLineVoxel)
+ * and reports hit/miss statistics. RNG state is saved and restored so the simulation
+ * doesn't affect game state.
+ */
+void BattlescapeState::simulateShot()
+{
+	// Null-check the full chain
+	BattlescapeGame *bg = _save->getBattleGame();
+	if (!bg) return;
+	BattleAction *action = bg->getCurrentAction();
+	if (!action || !action->targeting || !action->actor || !action->weapon) return;
+
+	// Guard null ammo — Projectile constructor asserts _ammo != nullptr
+	BattleItem *ammo = action->weapon->getAmmoForAction(action->type);
+	if (!ammo) return;
+
+	// Base accuracy (same calculation as Map.cpp crosshair display)
+	BattleActionAttack attack = BattleActionAttack::GetBeforeShoot(*action);
+	int baseAccuracy = BattleUnit::getFiringAccuracy(attack, _game->getMod());
+
+	// Origin voxel (same as ProjectileFlyBState)
+	Position origin = action->actor->getPosition();
+	Tile *originTile = _save->getTile(origin);
+	Position originVoxel = _save->getTileEngine()->getOriginVoxel(*action, originTile);
+
+	// Target voxel — try to aim at the unit, fall back to tile center
+	Tile *targetTile = _save->getTile(action->target);
+	Position targetVoxel;
+	bool canTarget = _save->getTileEngine()->canTargetUnit(&originVoxel, targetTile, &targetVoxel, action->actor, false);
+	if (!canTarget)
+	{
+		targetVoxel = action->target.toVoxel() + TileEngine::voxelTileCenter;
+	}
+
+	// Identify target unit for hit classification
+	BattleUnit *targetUnit = targetTile ? targetTile->getUnit() : nullptr;
+
+	// Distance for the report header
+	int distanceSq = action->actor->distance3dToPositionSq(action->target);
+	int distance = (int)std::ceil(sqrt(float(distanceSq)));
+
+	// Save RNG state — simulation must not affect game
+	RNG::RandomState savedState = RNG::globalRandomState();
+
+	const int N = 50;
+	int hitTarget = 0, hitOther = 0, hitWall = 0, hitObject = 0, hitFloor = 0, missed = 0;
+
+	struct SampleTrace { int trial; int result; Position hitPos; };
+	std::vector<SampleTrace> samples;
+
+	for (int i = 0; i < N; i++)
+	{
+		BattleAction simAction = *action;
+		// autoShotCounter = 0 bypasses the force-fire/Ctrl early-return check
+		// in Projectile.cpp:130-178. The player is holding Ctrl for this hotkey,
+		// so isCtrlPressed() would be true and distort the simulation results.
+		simAction.autoShotCounter = 0;
+		Position simTarget = targetVoxel;
+
+		Projectile proj(_game->getMod(), _save, simAction, origin, simTarget, ammo);
+		double acc = baseAccuracy / 100.0;
+		int result = proj.calculateTrajectory(acc, originVoxel);
+
+		// Check trajectory non-empty before accessing last element
+		const auto& traj = proj.getTrajectory();
+		Position hitPos = traj.empty() ? Position(-1, -1, -1) : traj.back().toTile();
+
+		switch (result)
+		{
+		case V_UNIT:
+		{
+			if (!traj.empty())
+			{
+				Tile *hitTile = _save->getTile(hitPos);
+				BattleUnit *hitUnit = hitTile ? hitTile->getUnit() : nullptr;
+				if (!hitUnit && hitPos.z > 0)
+				{
+					// Tall unit may occupy tile below
+					hitTile = _save->getTile(Position(hitPos.x, hitPos.y, hitPos.z - 1));
+					hitUnit = hitTile ? hitTile->getUnit() : nullptr;
+				}
+				if (hitUnit == targetUnit && targetUnit != nullptr)
+					hitTarget++;
+				else
+					hitOther++;
+			}
+			else
+			{
+				missed++;
+			}
+			break;
+		}
+		case V_NORTHWALL:
+		case V_WESTWALL:
+			hitWall++;
+			break;
+		case V_OBJECT:
+			hitObject++;
+			break;
+		case V_FLOOR:
+			hitFloor++;
+			break;
+		default:
+			missed++;
+			break;
+		}
+
+		// Keep a handful of sample traces for the report
+		if (samples.size() < 8)
+		{
+			samples.push_back({ i + 1, result, hitPos });
+		}
+	}
+
+	// Restore RNG state
+	RNG::globalRandomState() = savedState;
+
+	// Build report
+	std::ostringstream report;
+	report << "=== SHOT SIM: " << N << " trials ===\n";
+	report << action->actor->getName(_game->getLanguage()) << "\n";
+	report << action->weapon->getRules()->getType() << "\n";
+	report << "Accuracy: " << baseAccuracy << "% | Dist: " << distance << " tiles\n";
+	if (targetUnit)
+	{
+		report << "Target: " << targetUnit->getName(_game->getLanguage())
+			<< " (" << action->target.x << "," << action->target.y << "," << action->target.z << ")\n";
+	}
+	report << "\n";
+	report << "Hit target: " << hitTarget << "/" << N
+		<< " (" << (hitTarget * 100 / N) << "%)\n";
+	if (hitOther > 0)
+		report << "Hit other:  " << hitOther << "/" << N
+			<< " (" << (hitOther * 100 / N) << "%)\n";
+	int hitTerrain = hitWall + hitObject + hitFloor;
+	if (hitTerrain > 0)
+	{
+		report << "Hit terrain: " << hitTerrain << "/" << N << "\n";
+		if (hitWall > 0) report << "  Wall: " << hitWall << "\n";
+		if (hitObject > 0) report << "  Object: " << hitObject << "\n";
+		if (hitFloor > 0) report << "  Floor: " << hitFloor << "\n";
+	}
+	if (missed > 0)
+		report << "Missed: " << missed << "/" << N << "\n";
+
+	// Sample traces
+	report << "\n--- Traces ---\n";
+	const char* resultNames[] = { "Floor", "Wall-W", "Wall-N", "Object", "Unit", "OOB" };
+	for (const auto& s : samples)
+	{
+		int ri = s.result + 1; // V_EMPTY=-1 -> 0, V_FLOOR=0 -> 1, etc.
+		const char* name = (ri >= 0 && ri <= 5) ? resultNames[ri] : "Miss";
+		report << "#" << s.trial << ": " << name;
+		if (s.hitPos.x >= 0)
+			report << " @ (" << s.hitPos.x << "," << s.hitPos.y << "," << s.hitPos.z << ")";
+		report << "\n";
+	}
+
+	_game->pushState(new InfoboxOKState(report.str(), true));
+}
+
+/**
  * Gets melee damage preview.
  * @param actor Selected unit.
  * @param weapon Weapon to use for calculation.
@@ -2937,6 +3103,11 @@ inline void BattlescapeState::handle(Action *action)
 				{
 					_map->toggleLOSTrajectories();
 					_txtTooltip->setText(_map->getShowLOSTrajectories() ? "LOS traces enabled" : "LOS traces disabled");
+				}
+				// "ctrl-1" - Monte Carlo shot simulation report
+				else if (key == SDLK_1 && ctrlPressed)
+				{
+					simulateShot();
 				}
 				// "shift-1" - cover quality LOS lines
 				else if (key == SDLK_1 && shiftPressed)

@@ -254,6 +254,8 @@ public:
 	void warningRaw(const std::string &message);
 	/// Show warning message that stay longer on screen, no translation.
 	void warningLongRaw(const std::string &message);
+	/// Runs a Monte Carlo shot simulation and displays results.
+	void simulateShot();
 	/// Gets melee damage preview.
 	std::string getMeleeDamagePreview(BattleUnit *actor, BattleItem *weapon) const;
 	/// Handles keypresses.

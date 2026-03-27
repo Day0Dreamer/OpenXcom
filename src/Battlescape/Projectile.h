@@ -92,6 +92,8 @@ public:
 	bool isReversed() const;
 	/// adds a cloud of particles at the projectile's location
 	void addVaporCloud();
+	/// Gets the calculated trajectory.
+	const std::vector<Position>& getTrajectory() const { return _trajectory; }
 };
 
 }

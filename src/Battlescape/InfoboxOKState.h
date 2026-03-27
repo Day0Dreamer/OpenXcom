@@ -38,7 +38,7 @@ private:
 	Text *_txtTitle;
 public:
 	/// Creates the InfoboxOKState.
-	InfoboxOKState(const std::string &msg);
+	InfoboxOKState(const std::string &msg, bool largeReport = false);
 	/// Cleans up the InfoboxOKState.
 	~InfoboxOKState();
 	/// Handler for clicking the OK button.
