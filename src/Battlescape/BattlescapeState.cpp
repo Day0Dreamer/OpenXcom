@@ -3238,13 +3238,13 @@ inline void BattlescapeState::handle(Action *action)
 				{
 					if (SDL_GetModState() & KMOD_CTRL)
 					{
-						Options::oxceFirstPersonViewFisheyeProjection = !Options::oxceFirstPersonViewFisheyeProjection;
-						_pipDirty = true;
-					}
-					else if (SDL_GetModState() & KMOD_ALT)
-					{
 						cyclePipCorner();
 						Options::oxcePipViewCorner = _pipCorner;
+					}
+					else if (SDL_GetModState() & KMOD_SHIFT)
+					{
+						Options::oxceFirstPersonViewFisheyeProjection = !Options::oxceFirstPersonViewFisheyeProjection;
+						_pipDirty = true;
 					}
 					else
 					{
