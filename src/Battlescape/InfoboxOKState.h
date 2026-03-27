@@ -36,9 +36,10 @@ private:
 	TextButton *_btnOk;
 	Frame *_frame;
 	Text *_txtTitle;
+	Text *_txtRight;
 public:
 	/// Creates the InfoboxOKState.
-	InfoboxOKState(const std::string &msg, bool largeReport = false);
+	InfoboxOKState(const std::string &msg, bool largeReport = false, const std::string &msgRight = "");
 	/// Cleans up the InfoboxOKState.
 	~InfoboxOKState();
 	/// Handler for clicking the OK button.

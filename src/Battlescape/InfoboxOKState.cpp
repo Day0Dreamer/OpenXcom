@@ -34,16 +34,23 @@ namespace OpenXcom
  * @param game Pointer to the core game.
  * @param msg Message string.
  */
-InfoboxOKState::InfoboxOKState(const std::string &msg, bool largeReport)
+InfoboxOKState::InfoboxOKState(const std::string &msg, bool largeReport, const std::string &msgRight)
 {
 	_screen = false;
+	_txtRight = nullptr;
 
 	// Create objects
 	if (largeReport)
 	{
-		_frame = new Frame(300, 170, 10, 10);
+		_frame = new Frame(310, 170, 5, 10);
 		_btnOk = new TextButton(120, 18, 100, 158);
-		_txtTitle = new Text(290, 140, 15, 14);
+		// Left column: stats
+		_txtTitle = new Text(148, 145, 10, 13);
+		// Right column: traces
+		if (!msgRight.empty())
+		{
+			_txtRight = new Text(148, 145, 162, 13);
+		}
 	}
 	else
 	{
@@ -58,6 +65,10 @@ InfoboxOKState::InfoboxOKState(const std::string &msg, bool largeReport)
 	add(_frame, "infoBoxOK", "battlescape");
 	add(_btnOk, "infoBoxOKButton", "battlescape");
 	add(_txtTitle, "infoBoxOK", "battlescape");
+	if (_txtRight)
+	{
+		add(_txtRight, "infoBoxOK", "battlescape");
+	}
 
 	centerAllSurfaces();
 
@@ -76,6 +87,15 @@ InfoboxOKState::InfoboxOKState(const std::string &msg, bool largeReport)
 		_txtTitle->setSmall();
 		_txtTitle->setAlign(ALIGN_LEFT);
 		_txtTitle->setVerticalAlign(ALIGN_TOP);
+		if (_txtRight)
+		{
+			_txtRight->setSmall();
+			_txtRight->setAlign(ALIGN_LEFT);
+			_txtRight->setVerticalAlign(ALIGN_TOP);
+			_txtRight->setHighContrast(true);
+			_txtRight->setWordWrap(true);
+			_txtRight->setText(msgRight);
+		}
 	}
 	else
 	{

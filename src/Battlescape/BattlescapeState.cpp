@@ -2846,7 +2846,7 @@ void BattlescapeState::simulateShot()
 		}
 
 		// Keep a handful of sample traces for the report
-		if (samples.size() < 8)
+		if (samples.size() < 15)
 		{
 			samples.push_back({ i + 1, result, hitPos });
 		}
@@ -2855,48 +2855,49 @@ void BattlescapeState::simulateShot()
 	// Restore RNG state
 	RNG::globalRandomState() = savedState;
 
-	// Build report
-	std::ostringstream report;
-	report << "=== SHOT SIM: " << N << " trials ===\n";
-	report << action->actor->getName(_game->getLanguage()) << "\n";
-	report << action->weapon->getRules()->getType() << "\n";
-	report << "Accuracy: " << baseAccuracy << "% | Dist: " << distance << " tiles\n";
+	// Build left column: stats
+	std::ostringstream left;
+	left << "=== SHOT SIM: " << N << " ===\n";
+	left << action->actor->getName(_game->getLanguage()) << "\n";
+	left << action->weapon->getRules()->getType() << "\n";
+	left << "Acc: " << baseAccuracy << "% Dist: " << distance << "\n";
 	if (targetUnit)
 	{
-		report << "Target: " << targetUnit->getName(_game->getLanguage())
-			<< " (" << action->target.x << "," << action->target.y << "," << action->target.z << ")\n";
+		left << "Target: " << targetUnit->getName(_game->getLanguage()) << "\n";
+		left << "  (" << action->target.x << "," << action->target.y << "," << action->target.z << ")\n";
 	}
-	report << "\n";
-	report << "Hit target: " << hitTarget << "/" << N
+	left << "\n";
+	left << "Hit target: " << hitTarget << "/" << N
 		<< " (" << (hitTarget * 100 / N) << "%)\n";
 	if (hitOther > 0)
-		report << "Hit other:  " << hitOther << "/" << N
+		left << "Hit other:  " << hitOther << "/" << N
 			<< " (" << (hitOther * 100 / N) << "%)\n";
 	int hitTerrain = hitWall + hitObject + hitFloor;
 	if (hitTerrain > 0)
 	{
-		report << "Hit terrain: " << hitTerrain << "/" << N << "\n";
-		if (hitWall > 0) report << "  Wall: " << hitWall << "\n";
-		if (hitObject > 0) report << "  Object: " << hitObject << "\n";
-		if (hitFloor > 0) report << "  Floor: " << hitFloor << "\n";
+		left << "Hit terrain: " << hitTerrain << "/" << N << "\n";
+		if (hitWall > 0) left << "  Wall: " << hitWall << "\n";
+		if (hitObject > 0) left << "  Object: " << hitObject << "\n";
+		if (hitFloor > 0) left << "  Floor: " << hitFloor << "\n";
 	}
 	if (missed > 0)
-		report << "Missed: " << missed << "/" << N << "\n";
+		left << "Missed: " << missed << "/" << N << "\n";
 
-	// Sample traces
-	report << "\n--- Traces ---\n";
+	// Build right column: traces
+	std::ostringstream right;
+	right << "--- Traces ---\n";
 	const char* resultNames[] = { "Floor", "Wall-W", "Wall-N", "Object", "Unit", "OOB" };
 	for (const auto& s : samples)
 	{
 		int ri = s.result + 1; // V_EMPTY=-1 -> 0, V_FLOOR=0 -> 1, etc.
 		const char* name = (ri >= 0 && ri <= 5) ? resultNames[ri] : "Miss";
-		report << "#" << s.trial << ": " << name;
+		right << "#" << s.trial << ": " << name;
 		if (s.hitPos.x >= 0)
-			report << " @ (" << s.hitPos.x << "," << s.hitPos.y << "," << s.hitPos.z << ")";
-		report << "\n";
+			right << " @ (" << s.hitPos.x << "," << s.hitPos.y << "," << s.hitPos.z << ")";
+		right << "\n";
 	}
 
-	_game->pushState(new InfoboxOKState(report.str(), true));
+	_game->pushState(new InfoboxOKState(left.str(), true, right.str()));
 }
 
 /**
