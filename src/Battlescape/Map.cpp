@@ -111,7 +111,7 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) 
 	_unitDying(false), _smoothingEngaged(false), _flashScreen(false), _bgColor(15), _projectileSet(0),
 	_showObstacles(false), _showUnitFOV(false), _showLOSTrajectories(false),
 	_showCoverQuality(false), _showBlockedLOS(false), _showHitProbability(false),
-	_showCorridorOfFire(false), _showOverwatchLanes(false), _overlayCacheDirty(true), _cachedOverlayUnit(nullptr),
+	_showCorridorOfFire(false), _showCrossfire(false), _showOverwatchLanes(false), _overlayCacheDirty(true), _cachedOverlayUnit(nullptr),
 	_cachedOverlayDir(-1), _showInfoOnCursor(false)
 {
 	// TODO: extract to a better place later
@@ -2034,11 +2034,50 @@ void Map::drawTerrain(Surface *surface)
 				int exposure = std::min(100, exposureRaw / 3); // normalize 0-300 to 0-100%
 				Uint8 color = (exposure >= 67) ? 48 : (exposure >= 33) ? 160 : 32;
 
-				std::vector<Position> trajectory;
-				Position targetVoxel;
-				if (_save->getTileEngine()->canTargetUnit(&originVoxel, enemy->getTile(), &targetVoxel, selectedUnit, false, enemy))
+				// Draw exposure percentage near enemy
+				Position enemyScreen;
+				_camera->convertMapToScreen(enemy->getPosition(), &enemyScreen);
+				enemyScreen += _camera->getMapOffset();
+				_txtAccuracy->setColor(Palette::blockOffset(color == 48 ? Pathfinding::green - 1 : color == 160 ? Pathfinding::yellow - 1 : Pathfinding::red - 1) - 1);
+				std::ostringstream ss;
+				ss << "Vsbl.:" << exposure << "%";
+				_txtAccuracy->setText(ss.str());
+				_txtAccuracy->draw();
+				_txtAccuracy->blitNShade(surface, enemyScreen.x + 10, enemyScreen.y, 0);
+			}
+		}
+	}
+
+	// Shift+4: Crossfire visualization (all soldiers' LOS to hovered enemy)
+	if (_showCrossfire)
+	{
+		BattleUnit *selectedUnit = _save->getSelectedUnit();
+		if (selectedUnit)
+		{
+			Position hoveredPos(_selectorX, _selectorY, _camera->getViewLevel());
+			Tile *hoveredTile = _save->getTile(hoveredPos);
+			BattleUnit *hoveredEnemy = hoveredTile ? hoveredTile->getUnit() : nullptr;
+			if (hoveredEnemy && hoveredEnemy->getFaction() == FACTION_HOSTILE && !hoveredEnemy->isOut())
+			{
+				for (auto *soldier : *_save->getUnits())
 				{
-					_save->getTileEngine()->calculateLineVoxel(originVoxel, targetVoxel, true, &trajectory, selectedUnit);
+					if (soldier->getFaction() != FACTION_PLAYER || soldier->isOut() || !soldier->getTile()) continue;
+
+					Position soldierOrigin = _save->getTileEngine()->getSightOriginVoxel(soldier);
+					std::vector<Position> trajectory;
+					Position targetVoxel;
+					Uint8 color;
+					if (_save->getTileEngine()->canTargetUnit(&soldierOrigin, hoveredEnemy->getTile(), &targetVoxel, soldier, false, hoveredEnemy))
+					{
+						color = 48; // green — has shot
+						_save->getTileEngine()->calculateLineVoxel(soldierOrigin, targetVoxel, true, &trajectory, soldier);
+					}
+					else
+					{
+						color = 8; // grey — no shot
+						Position enemyCenter = hoveredEnemy->getPosition().toVoxel() + Position(8, 8, hoveredEnemy->getHeight() / 2);
+						_save->getTileEngine()->calculateLineVoxel(soldierOrigin, enemyCenter, true, &trajectory, soldier);
+					}
 					for (size_t i = 1; i < trajectory.size(); i++)
 					{
 						Position s1, s2;
@@ -2047,16 +2086,6 @@ void Map::drawTerrain(Surface *surface)
 						surface->drawLine(s1.x, s1.y, s2.x, s2.y, color);
 					}
 				}
-				// Draw exposure percentage near enemy
-				Position enemyScreen;
-				_camera->convertMapToScreen(enemy->getPosition(), &enemyScreen);
-				enemyScreen += _camera->getMapOffset();
-				_txtAccuracy->setColor(Palette::blockOffset(color == 48 ? Pathfinding::green - 1 : color == 160 ? Pathfinding::yellow - 1 : Pathfinding::red - 1) - 1);
-				std::ostringstream ss;
-				ss << exposure << "%";
-				_txtAccuracy->setText(ss.str());
-				_txtAccuracy->draw();
-				_txtAccuracy->blitNShade(surface, enemyScreen.x + 10, enemyScreen.y, 0);
 			}
 		}
 	}
@@ -2881,6 +2910,7 @@ void Map::toggleCoverQuality() { _showCoverQuality = !_showCoverQuality; }
 void Map::toggleBlockedLOS() { _showBlockedLOS = !_showBlockedLOS; }
 void Map::toggleHitProbability() { _showHitProbability = !_showHitProbability; }
 void Map::toggleCorridorOfFire() { _showCorridorOfFire = !_showCorridorOfFire; invalidateOverlayCache(); }
+void Map::toggleCrossfire() { _showCrossfire = !_showCrossfire; }
 void Map::toggleOverwatchLanes() { _showOverwatchLanes = !_showOverwatchLanes; invalidateOverlayCache(); }
 
 void Map::invalidateOverlayCache()

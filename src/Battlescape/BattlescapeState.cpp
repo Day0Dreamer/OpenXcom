@@ -3168,6 +3168,12 @@ inline void BattlescapeState::handle(Action *action)
 					_map->toggleCorridorOfFire();
 					_txtTooltip->setText(_map->getShowCorridorOfFire() ? "Corridor of fire enabled" : "Corridor of fire disabled");
 				}
+				// "shift-4" - crossfire visualization (hover over enemy)
+				else if (key == SDLK_4 && shiftPressed)
+				{
+					_map->toggleCrossfire();
+					_txtTooltip->setText(_map->getShowCrossfire() ? "Crossfire enabled: hover over enemy" : "Crossfire disabled");
+				}
 				// "o" - overwatch lanes
 				else if (key == SDLK_o)
 				{

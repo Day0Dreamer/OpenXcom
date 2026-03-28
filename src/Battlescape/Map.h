@@ -120,6 +120,7 @@ private:
 	bool _showBlockedLOS;
 	bool _showHitProbability;
 	bool _showCorridorOfFire;
+	bool _showCrossfire;
 	bool _showOverwatchLanes;
 	// Overlay caches for tile-level modes
 	std::unordered_set<Tile*> _corridorTiles;
@@ -249,6 +250,8 @@ public:
 	bool getShowHitProbability() const { return _showHitProbability; }
 	void toggleCorridorOfFire();
 	bool getShowCorridorOfFire() const { return _showCorridorOfFire; }
+	void toggleCrossfire();
+	bool getShowCrossfire() const { return _showCrossfire; }
 	void toggleOverwatchLanes();
 	bool getShowOverwatchLanes() const { return _showOverwatchLanes; }
 	/// Invalidate overlay caches (call on unit change/move/turn boundary).
