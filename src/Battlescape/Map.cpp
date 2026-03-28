@@ -111,9 +111,7 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) 
 	_unitDying(false), _smoothingEngaged(false), _flashScreen(false), _bgColor(15), _projectileSet(0),
 	_showObstacles(false), _showUnitFOV(false), _showLOSTrajectories(false),
 	_showCoverQuality(false), _showBlockedLOS(false), _showHitProbability(false),
-	_showCorridorOfFire(false), _showCrossfire(false), _showDangerZone(false),
-	_showBestCover(false), _showSmokePreview(false), _showReactionRisk(false),
-	_showOverwatchLanes(false), _overlayCacheDirty(true), _cachedOverlayUnit(nullptr),
+	_showCorridorOfFire(false), _showOverwatchLanes(false), _overlayCacheDirty(true), _cachedOverlayUnit(nullptr),
 	_cachedOverlayDir(-1), _showInfoOnCursor(false)
 {
 	// TODO: extract to a better place later
@@ -769,9 +767,6 @@ void Map::drawTerrain(Surface *surface)
 	if (overlayUnit && (_overlayCacheDirty || _cachedOverlayUnit != overlayUnit || _cachedOverlayDir != overlayUnit->getDirection()))
 	{
 		_corridorTiles.clear();
-		_dangerTiles.clear();
-		_coverScores.clear();
-		_reactionTiles.clear();
 		_cachedOverlayUnit = overlayUnit;
 		_cachedOverlayDir = overlayUnit->getDirection();
 		_overlayCacheDirty = false;
@@ -791,102 +786,6 @@ void Map::drawTerrain(Surface *surface)
 					_save->getTileEngine()->calculateLineVoxel(overlayOrigin, targetVoxel, true, &trajectory, overlayUnit);
 					for (const auto &v : trajectory)
 						_corridorTiles.insert(_save->getTile(v.toTile()));
-				}
-			}
-		}
-
-		// Shift+6: Danger zone — collect tiles along enemy LOS toward selected unit
-		if (_showDangerZone)
-		{
-			Position unitCenter = overlayUnit->getPosition().toVoxel() + Position(8, 8, overlayUnit->getHeight() / 2);
-			for (auto *unit : *_save->getUnits())
-			{
-				if (unit->getFaction() != FACTION_HOSTILE || unit->isOut() || !unit->getTile()) continue;
-				Position enemyOrigin = _save->getTileEngine()->getSightOriginVoxel(unit);
-				std::vector<Position> trajectory;
-				_save->getTileEngine()->calculateLineVoxel(enemyOrigin, unitCenter, true, &trajectory, unit);
-				for (const auto &v : trajectory)
-				{
-					Tile *t = _save->getTile(v.toTile());
-					if (t) _dangerTiles.insert(t);
-				}
-			}
-		}
-
-		// Shift+7: Best cover — for nearby tiles, count how many enemies are blocked
-		if (_showBestCover)
-		{
-			int unitZ = overlayUnit->getPosition().z;
-			int cx = overlayUnit->getPosition().x;
-			int cy = overlayUnit->getPosition().y;
-			int visibleEnemyCount = (int)overlayUnit->getVisibleUnits()->size();
-
-			for (int dx = -4; dx <= 4; dx++)
-			{
-				for (int dy = -4; dy <= 4; dy++)
-				{
-					Position candidatePos(cx + dx, cy + dy, unitZ);
-					Tile *candidateTile = _save->getTile(candidatePos);
-					if (!candidateTile || !candidateTile->isDiscovered(O_FLOOR)) continue;
-
-					Position hypotheticalVoxel = candidatePos.toVoxel() + Position(8, 8, overlayUnit->getHeight() - 1);
-					int blocked = 0;
-					for (auto *enemy : *overlayUnit->getVisibleUnits())
-					{
-						if (!enemy->getTile()) continue;
-						Position enemyCenter = enemy->getPosition().toVoxel() + Position(8, 8, enemy->getHeight() / 2);
-						std::vector<Position> trajectory;
-						VoxelType hit = _save->getTileEngine()->calculateLineVoxel(hypotheticalVoxel, enemyCenter, true, &trajectory, overlayUnit);
-						if (hit == V_UNIT)
-						{
-							// Verify the hit is on the intended enemy's tile, not another unit
-							if (!trajectory.empty() && trajectory.at(0).toTile() != enemy->getPosition()) { blocked++; }
-						}
-						else
-						{
-							blocked++; // blocked by terrain
-						}
-					}
-					if (visibleEnemyCount > 0)
-						_coverScores[candidateTile] = blocked;
-				}
-			}
-		}
-
-		// Shift+9: Reaction fire risk — check path tiles against enemy view sectors
-		if (_showReactionRisk)
-		{
-			const std::vector<int> &path = _save->getPathfinding()->getPath();
-			if (!path.empty())
-			{
-				Position walkPos = overlayUnit->getPosition();
-				for (int dir : path)
-				{
-					Position delta;
-					Pathfinding::directionToVector(dir, &delta);
-					walkPos = walkPos + delta;
-					Tile *pathTile = _save->getTile(walkPos);
-					if (!pathTile) continue;
-
-					bool dangerous = false;
-					for (auto *enemy : *_save->getUnits())
-					{
-						if (enemy->getFaction() != FACTION_HOSTILE || enemy->isOut() || !enemy->getTile()) continue;
-						if (enemy->checkViewSector(walkPos))
-						{
-							Position enemyOrigin = _save->getTileEngine()->getSightOriginVoxel(enemy);
-							Position pathCenter = walkPos.toVoxel() + Position(8, 8, 12);
-							std::vector<Position> trajectory;
-							VoxelType hit = _save->getTileEngine()->calculateLineVoxel(enemyOrigin, pathCenter, false, &trajectory, enemy);
-							if (hit == V_EMPTY)
-							{
-								dangerous = true;
-								break;
-							}
-						}
-					}
-					if (dangerous)
-						_reactionTiles.insert(pathTile);
 				}
 			}
 		}
@@ -1098,38 +997,6 @@ void Map::drawTerrain(Surface *surface)
 						if (_showCorridorOfFire && _corridorTiles.count(tile))
 						{
 							obstacleShade = getShadePulseForFrame(tileShade, _animFrame);
-							tileShade = obstacleShade;
-						}
-						// Shift+6: Danger zone — darken tiles in enemy firing lanes
-						if (_showDangerZone && _dangerTiles.count(tile))
-						{
-							tileShade = std::max(0, tileShade - 4); // brighten to highlight
-							obstacleShade = tileShade;
-						}
-						// Shift+7: Best cover — color tiles by cover score
-						if (_showBestCover)
-						{
-							auto it = _coverScores.find(tile);
-							if (it != _coverScores.end())
-							{
-								int visibleCount = overlayUnit ? (int)overlayUnit->getVisibleUnits()->size() : 0;
-								if (visibleCount > 0)
-								{
-									float ratio = (float)it->second / visibleCount;
-									// Pulse more for better cover
-									if (ratio >= 0.9f)
-										tileShade = std::max(0, tileShade - 6); // bright green-ish
-									else if (ratio >= 0.5f)
-										tileShade = std::max(0, tileShade - 3); // medium
-									// poor cover: no change (stays normal)
-								}
-								obstacleShade = tileShade;
-							}
-						}
-						// Shift+9: Reaction risk — highlight dangerous path tiles
-						if (_showReactionRisk && _reactionTiles.count(tile))
-						{
-							obstacleShade = getShadePulseForFrame(std::max(0, tileShade - 4), _animFrame);
 							tileShade = obstacleShade;
 						}
 					}
@@ -2081,8 +1948,9 @@ void Map::drawTerrain(Surface *surface)
 			for (auto *enemy : *selectedUnit->getVisibleUnits())
 			{
 				if (!enemy->getTile()) continue;
-				int exposure = _save->getTileEngine()->checkVoxelExposure(&originVoxel, enemy->getTile(), selectedUnit, enemy);
-				Uint8 color = (exposure >= 70) ? 48 : (exposure >= 30) ? 160 : 32; // green/yellow/red
+				int exposureRaw = _save->getTileEngine()->checkVoxelExposure(&originVoxel, enemy->getTile(), selectedUnit, enemy);
+				int exposure = std::min(100, exposureRaw / 3); // normalize 0-300 range to 0-100%
+				Uint8 color = (exposure >= 67) ? 48 : (exposure >= 33) ? 160 : 32; // green/yellow/red
 
 				std::vector<Position> trajectory;
 				Position targetVoxel;
@@ -2162,8 +2030,9 @@ void Map::drawTerrain(Surface *surface)
 			for (auto *enemy : *selectedUnit->getVisibleUnits())
 			{
 				if (!enemy->getTile()) continue;
-				int exposure = _save->getTileEngine()->checkVoxelExposure(&originVoxel, enemy->getTile(), selectedUnit, enemy);
-				Uint8 color = (exposure >= 70) ? 48 : (exposure >= 30) ? 160 : 32;
+				int exposureRaw = _save->getTileEngine()->checkVoxelExposure(&originVoxel, enemy->getTile(), selectedUnit, enemy);
+				int exposure = std::min(100, exposureRaw / 3); // normalize 0-300 to 0-100%
+				Uint8 color = (exposure >= 67) ? 48 : (exposure >= 33) ? 160 : 32;
 
 				std::vector<Position> trajectory;
 				Position targetVoxel;
@@ -2188,93 +2057,6 @@ void Map::drawTerrain(Surface *surface)
 				_txtAccuracy->setText(ss.str());
 				_txtAccuracy->draw();
 				_txtAccuracy->blitNShade(surface, enemyScreen.x + 10, enemyScreen.y, 0);
-			}
-		}
-	}
-
-	// Shift+5: Crossfire visualization (all soldiers' LOS to hovered enemy)
-	if (_showCrossfire)
-	{
-		BattleUnit *selectedUnit = _save->getSelectedUnit();
-		if (selectedUnit)
-		{
-			Position hoveredPos(_selectorX, _selectorY, _camera->getViewLevel());
-			Tile *hoveredTile = _save->getTile(hoveredPos);
-			BattleUnit *hoveredEnemy = hoveredTile ? hoveredTile->getUnit() : nullptr;
-			if (hoveredEnemy && hoveredEnemy->getFaction() == FACTION_HOSTILE && !hoveredEnemy->isOut())
-			{
-				for (auto *soldier : *_save->getUnits())
-				{
-					if (soldier->getFaction() != FACTION_PLAYER || soldier->isOut() || !soldier->getTile()) continue;
-
-					Position soldierOrigin = _save->getTileEngine()->getSightOriginVoxel(soldier);
-					std::vector<Position> trajectory;
-					Position targetVoxel;
-					Uint8 color;
-					if (_save->getTileEngine()->canTargetUnit(&soldierOrigin, hoveredEnemy->getTile(), &targetVoxel, soldier, false, hoveredEnemy))
-					{
-						color = 48; // green — has shot
-						_save->getTileEngine()->calculateLineVoxel(soldierOrigin, targetVoxel, true, &trajectory, soldier);
-					}
-					else
-					{
-						color = 8; // grey — no shot
-						Position enemyCenter = hoveredEnemy->getPosition().toVoxel() + Position(8, 8, hoveredEnemy->getHeight() / 2);
-						_save->getTileEngine()->calculateLineVoxel(soldierOrigin, enemyCenter, true, &trajectory, soldier);
-					}
-					for (size_t i = 1; i < trajectory.size(); i++)
-					{
-						Position s1, s2;
-						_camera->convertVoxelToScreen(trajectory[i - 1], &s1);
-						_camera->convertVoxelToScreen(trajectory[i], &s2);
-						surface->drawLine(s1.x, s1.y, s2.x, s2.y, color);
-					}
-				}
-			}
-		}
-	}
-
-	// Shift+8: Smoke effectiveness preview (check if hovered tile blocks enemy LOS)
-	if (_showSmokePreview)
-	{
-		BattleUnit *selectedUnit = _save->getSelectedUnit();
-		if (selectedUnit)
-		{
-			Position hoveredPos(_selectorX, _selectorY, _camera->getViewLevel());
-			Tile *hoveredTile = _save->getTile(hoveredPos);
-			if (hoveredTile)
-			{
-				Position originVoxel = _save->getTileEngine()->getSightOriginVoxel(selectedUnit);
-				for (auto *enemy : *selectedUnit->getVisibleUnits())
-				{
-					if (!enemy->getTile()) continue;
-					std::vector<Position> trajectory;
-					Position targetVoxel;
-					if (!_save->getTileEngine()->canTargetUnit(&originVoxel, enemy->getTile(), &targetVoxel, selectedUnit, false, enemy))
-						continue;
-
-					_save->getTileEngine()->calculateLineVoxel(originVoxel, targetVoxel, true, &trajectory, selectedUnit);
-
-					// Check if trajectory passes through the hovered tile
-					bool passesThrough = false;
-					for (const auto &voxel : trajectory)
-					{
-						if (voxel.toTile() == hoveredPos)
-						{
-							passesThrough = true;
-							break;
-						}
-					}
-
-					Uint8 color = passesThrough ? 48 : 32; // green if smoke would block, red if not
-					for (size_t i = 1; i < trajectory.size(); i++)
-					{
-						Position s1, s2;
-						_camera->convertVoxelToScreen(trajectory[i - 1], &s1);
-						_camera->convertVoxelToScreen(trajectory[i], &s2);
-						surface->drawLine(s1.x, s1.y, s2.x, s2.y, color);
-					}
-				}
 			}
 		}
 	}
@@ -3099,20 +2881,12 @@ void Map::toggleCoverQuality() { _showCoverQuality = !_showCoverQuality; }
 void Map::toggleBlockedLOS() { _showBlockedLOS = !_showBlockedLOS; }
 void Map::toggleHitProbability() { _showHitProbability = !_showHitProbability; }
 void Map::toggleCorridorOfFire() { _showCorridorOfFire = !_showCorridorOfFire; invalidateOverlayCache(); }
-void Map::toggleCrossfire() { _showCrossfire = !_showCrossfire; }
-void Map::toggleDangerZone() { _showDangerZone = !_showDangerZone; invalidateOverlayCache(); }
-void Map::toggleBestCover() { _showBestCover = !_showBestCover; invalidateOverlayCache(); }
-void Map::toggleSmokePreview() { _showSmokePreview = !_showSmokePreview; }
-void Map::toggleReactionRisk() { _showReactionRisk = !_showReactionRisk; invalidateOverlayCache(); }
 void Map::toggleOverwatchLanes() { _showOverwatchLanes = !_showOverwatchLanes; invalidateOverlayCache(); }
 
 void Map::invalidateOverlayCache()
 {
 	_overlayCacheDirty = true;
 	_corridorTiles.clear();
-	_dangerTiles.clear();
-	_coverScores.clear();
-	_reactionTiles.clear();
 	_overwatchRays.clear();
 }
 

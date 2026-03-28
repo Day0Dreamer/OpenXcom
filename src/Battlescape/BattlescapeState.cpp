@@ -2781,6 +2781,14 @@ void BattlescapeState::simulateShot()
 	// Identify target unit for hit classification
 	BattleUnit *targetUnit = targetTile ? targetTile->getUnit() : nullptr;
 
+	// Calculate exposure (how much of the target body is visible)
+	int exposure = 0;
+	if (targetUnit)
+	{
+		int exposureRaw = _save->getTileEngine()->checkVoxelExposure(&originVoxel, targetTile, action->actor, nullptr);
+		exposure = std::min(100, exposureRaw / 3);
+	}
+
 	// Distance for the report header
 	int distanceSq = action->actor->distance3dToPositionSq(cursorPos);
 	int distance = (int)std::ceil(sqrt(float(distanceSq)));
@@ -2867,16 +2875,31 @@ void BattlescapeState::simulateShot()
 	left << "=== SHOT SIM: " << N << " ===\n";
 	left << action->actor->getName(_game->getLanguage()) << "\n";
 	left << action->weapon->getRules()->getType() << "\n";
-	left << "Acc: " << baseAccuracy << "% Dist: " << distance << "\n";
-	left << (canTarget ? "LOF: yes" : "LOF: no (tile center)") << "\n";
 	if (targetUnit)
-	{
-		left << "Target: " << targetUnit->getName(_game->getLanguage()) << "\n";
-	}
-	left << "Aim: (" << targetVoxel.x << "," << targetVoxel.y << "," << targetVoxel.z << ")\n";
+		left << "> " << targetUnit->getName(_game->getLanguage()) << "\n";
 	left << "\n";
-	left << "Hit target: " << hitTarget << "/" << N
-		<< " (" << (hitTarget * 100 / N) << "%)\n";
+	left << exposure << "% exposed\n";
+	left << "x " << baseAccuracy << "% accuracy\n";
+	left << "= " << (hitTarget * 100 / N) << "% hit (" << hitTarget << "/" << N << ")\n";
+	left << "Dist: " << distance << " | ";
+
+	// Damage range (same logic as Map.cpp ALT display)
+	{
+		const RuleItem *weaponRule = action->weapon->getRules();
+		const RuleItem *damageRule = weaponRule;
+		if (action->weapon->needsAmmoForAction(action->type) && ammo)
+			damageRule = ammo->getRules();
+		int totalDamage = 0;
+		if (weaponRule->getIgnoreAmmoPower())
+			totalDamage = weaponRule->getPowerBonus(attack);
+		else
+			totalDamage = damageRule->getPowerBonus(attack);
+		totalDamage -= damageRule->getPowerRangeReduction(distance * 16);
+		if (totalDamage < 0) totalDamage = 0;
+		int dmgMin = damageRule->getDamageType()->getRandomDamage(totalDamage, 1);
+		int dmgMax = damageRule->getDamageType()->getRandomDamage(totalDamage, 2);
+		left << "Dmg: " << dmgMin << "-" << dmgMax << "\n";
+	}
 	if (hitOther > 0)
 		left << "Hit other:  " << hitOther << "/" << N
 			<< " (" << (hitOther * 100 / N) << "%)\n";
@@ -3110,73 +3133,43 @@ inline void BattlescapeState::handle(Action *action)
 					_map->toggleUnitFOV();
 					_txtTooltip->setText(_map->getShowUnitFOV() ? "FOV cone enabled" : "FOV cone disabled");
 				}
-				// "shift-`" - toggle raw voxel-traced LOS trajectory lines
-				else if (key == SDLK_BACKQUOTE && shiftPressed)
-				{
-					_map->toggleLOSTrajectories();
-					_txtTooltip->setText(_map->getShowLOSTrajectories() ? "LOS traces enabled" : "LOS traces disabled");
-				}
-				// "ctrl-1" - Monte Carlo shot simulation report
-				else if (key == SDLK_1 && ctrlPressed)
-				{
-					simulateShot();
-				}
-				// "shift-1" - cover quality LOS lines
-				else if (key == SDLK_1 && shiftPressed)
-				{
-					_map->toggleCoverQuality();
-					_txtTooltip->setText(_map->getShowCoverQuality() ? "Cover quality enabled" : "Cover quality disabled");
-				}
-				// "shift-2" - blocked LOS to all enemies
-				else if (key == SDLK_2 && shiftPressed)
+				// "ctrl-shift-1" - blocked LOS to all enemies
+				else if (key == SDLK_1 && ctrlPressed && shiftPressed)
 				{
 					_map->toggleBlockedLOS();
 					_txtTooltip->setText(_map->getShowBlockedLOS() ? "Blocked LOS enabled" : "Blocked LOS disabled");
 				}
-				// "shift-3" - hit probability overlay
+				// "ctrl-1" - lines of sight
+				else if (key == SDLK_1 && ctrlPressed)
+				{
+					_map->toggleLOSTrajectories();
+					_txtTooltip->setText(_map->getShowLOSTrajectories() ? "Lines of sight: enabled" : "Lines of sight: disabled");
+				}
+				// "alt-1" - Monte Carlo shot simulation report
+				else if (key == SDLK_1 && (SDL_GetModState() & KMOD_ALT))
+				{
+					simulateShot();
+				}
+				// "shift-1" - colored lines of sight
+				else if (key == SDLK_1 && shiftPressed)
+				{
+					_map->toggleCoverQuality();
+					_txtTooltip->setText(_map->getShowCoverQuality() ? "Colored lines of sight: enabled" : "Colored lines of sight: disabled");
+				}
+				// "shift-3" - how much of enemy is visible to the unit
 				else if (key == SDLK_3 && shiftPressed)
 				{
 					_map->toggleHitProbability();
-					_txtTooltip->setText(_map->getShowHitProbability() ? "Hit probability enabled" : "Hit probability disabled");
+					_txtTooltip->setText(_map->getShowHitProbability() ? "How much of enemy is visible to the unit: enabled" : "How much of enemy is visible to the unit: disabled");
 				}
-				// "shift-4" - corridor of fire tile highlighting
-				else if (key == SDLK_4 && shiftPressed)
+				// "shift-2" - corridor of fire tile highlighting
+				else if (key == SDLK_2 && shiftPressed)
 				{
 					_map->toggleCorridorOfFire();
 					_txtTooltip->setText(_map->getShowCorridorOfFire() ? "Corridor of fire enabled" : "Corridor of fire disabled");
 				}
-				// "shift-5" - crossfire visualization (hover over enemy)
-				else if (key == SDLK_5 && shiftPressed)
-				{
-					_map->toggleCrossfire();
-					_txtTooltip->setText(_map->getShowCrossfire() ? "Crossfire enabled" : "Crossfire disabled");
-				}
-				// "shift-6" - danger zone
-				else if (key == SDLK_6 && shiftPressed)
-				{
-					_map->toggleDangerZone();
-					_txtTooltip->setText(_map->getShowDangerZone() ? "Danger zone enabled" : "Danger zone disabled");
-				}
-				// "shift-7" - best cover finder
-				else if (key == SDLK_7 && shiftPressed)
-				{
-					_map->toggleBestCover();
-					_txtTooltip->setText(_map->getShowBestCover() ? "Best cover enabled" : "Best cover disabled");
-				}
-				// "shift-8" - smoke effectiveness preview
-				else if (key == SDLK_8 && shiftPressed)
-				{
-					_map->toggleSmokePreview();
-					_txtTooltip->setText(_map->getShowSmokePreview() ? "Smoke preview enabled" : "Smoke preview disabled");
-				}
-				// "shift-9" - reaction fire risk
-				else if (key == SDLK_9 && shiftPressed)
-				{
-					_map->toggleReactionRisk();
-					_txtTooltip->setText(_map->getShowReactionRisk() ? "Reaction risk enabled" : "Reaction risk disabled");
-				}
-				// "shift-0" - overwatch lanes
-				else if (key == SDLK_0 && shiftPressed)
+				// "o" - overwatch lanes
+				else if (key == SDLK_o)
 				{
 					_map->toggleOverwatchLanes();
 					_txtTooltip->setText(_map->getShowOverwatchLanes() ? "Overwatch lanes enabled" : "Overwatch lanes disabled");

@@ -25,7 +25,6 @@
 #include "Particle.h"
 #include <vector>
 #include <unordered_set>
-#include <unordered_map>
 
 namespace OpenXcom
 {
@@ -121,17 +120,9 @@ private:
 	bool _showBlockedLOS;
 	bool _showHitProbability;
 	bool _showCorridorOfFire;
-	bool _showCrossfire;
-	bool _showDangerZone;
-	bool _showBestCover;
-	bool _showSmokePreview;
-	bool _showReactionRisk;
 	bool _showOverwatchLanes;
 	// Overlay caches for tile-level modes
 	std::unordered_set<Tile*> _corridorTiles;
-	std::unordered_set<Tile*> _dangerTiles;
-	std::unordered_map<Tile*, int> _coverScores;
-	std::unordered_set<Tile*> _reactionTiles;
 	// Overwatch lane cache: pairs of (start screen pos, end screen pos)
 	struct OverwatchRay { Position startVoxel; Position endVoxel; };
 	std::vector<OverwatchRay> _overwatchRays;
@@ -258,16 +249,6 @@ public:
 	bool getShowHitProbability() const { return _showHitProbability; }
 	void toggleCorridorOfFire();
 	bool getShowCorridorOfFire() const { return _showCorridorOfFire; }
-	void toggleCrossfire();
-	bool getShowCrossfire() const { return _showCrossfire; }
-	void toggleDangerZone();
-	bool getShowDangerZone() const { return _showDangerZone; }
-	void toggleBestCover();
-	bool getShowBestCover() const { return _showBestCover; }
-	void toggleSmokePreview();
-	bool getShowSmokePreview() const { return _showSmokePreview; }
-	void toggleReactionRisk();
-	bool getShowReactionRisk() const { return _showReactionRisk; }
 	void toggleOverwatchLanes();
 	bool getShowOverwatchLanes() const { return _showOverwatchLanes; }
 	/// Invalidate overlay caches (call on unit change/move/turn boundary).
