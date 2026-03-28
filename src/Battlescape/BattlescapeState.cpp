@@ -2758,31 +2758,37 @@ void BattlescapeState::simulateShot()
 	BattleActionAttack attack = BattleActionAttack::GetBeforeShoot(*action);
 	int baseAccuracy = BattleUnit::getFiringAccuracy(attack, _game->getMod());
 
+	// Get cursor position (action->target isn't set until the player clicks to fire)
+	Position cursorPos;
+	_map->getSelectorPosition(&cursorPos);
+
 	// Origin voxel (same as ProjectileFlyBState)
 	Position origin = action->actor->getPosition();
 	Tile *originTile = _save->getTile(origin);
+	if (!originTile) return;
 	Position originVoxel = _save->getTileEngine()->getOriginVoxel(*action, originTile);
 
 	// Target voxel — try to aim at the unit, fall back to tile center
-	Tile *targetTile = _save->getTile(action->target);
+	Tile *targetTile = _save->getTile(cursorPos);
+	if (!targetTile) return;
 	Position targetVoxel;
 	bool canTarget = _save->getTileEngine()->canTargetUnit(&originVoxel, targetTile, &targetVoxel, action->actor, false);
 	if (!canTarget)
 	{
-		targetVoxel = action->target.toVoxel() + TileEngine::voxelTileCenter;
+		targetVoxel = cursorPos.toVoxel() + TileEngine::voxelTileCenter;
 	}
 
 	// Identify target unit for hit classification
 	BattleUnit *targetUnit = targetTile ? targetTile->getUnit() : nullptr;
 
 	// Distance for the report header
-	int distanceSq = action->actor->distance3dToPositionSq(action->target);
+	int distanceSq = action->actor->distance3dToPositionSq(cursorPos);
 	int distance = (int)std::ceil(sqrt(float(distanceSq)));
 
 	// Save RNG state — simulation must not affect game
 	RNG::RandomState savedState = RNG::globalRandomState();
 
-	const int N = 50;
+	const int N = 250;
 	int hitTarget = 0, hitOther = 0, hitWall = 0, hitObject = 0, hitFloor = 0, missed = 0;
 
 	struct SampleTrace { int trial; int result; Position hitPos; };
@@ -2791,6 +2797,7 @@ void BattlescapeState::simulateShot()
 	for (int i = 0; i < N; i++)
 	{
 		BattleAction simAction = *action;
+		simAction.target = cursorPos;
 		// autoShotCounter = 0 bypasses the force-fire/Ctrl early-return check
 		// in Projectile.cpp:130-178. The player is holding Ctrl for this hotkey,
 		// so isCtrlPressed() would be true and distort the simulation results.
@@ -2861,11 +2868,12 @@ void BattlescapeState::simulateShot()
 	left << action->actor->getName(_game->getLanguage()) << "\n";
 	left << action->weapon->getRules()->getType() << "\n";
 	left << "Acc: " << baseAccuracy << "% Dist: " << distance << "\n";
+	left << (canTarget ? "LOF: yes" : "LOF: no (tile center)") << "\n";
 	if (targetUnit)
 	{
 		left << "Target: " << targetUnit->getName(_game->getLanguage()) << "\n";
-		left << "  (" << action->target.x << "," << action->target.y << "," << action->target.z << ")\n";
 	}
+	left << "Aim: (" << targetVoxel.x << "," << targetVoxel.y << "," << targetVoxel.z << ")\n";
 	left << "\n";
 	left << "Hit target: " << hitTarget << "/" << N
 		<< " (" << (hitTarget * 100 / N) << "%)\n";
@@ -2876,9 +2884,12 @@ void BattlescapeState::simulateShot()
 	if (hitTerrain > 0)
 	{
 		left << "Hit terrain: " << hitTerrain << "/" << N << "\n";
-		if (hitWall > 0) left << "  Wall: " << hitWall << "\n";
-		if (hitObject > 0) left << "  Object: " << hitObject << "\n";
-		if (hitFloor > 0) left << "  Floor: " << hitFloor << "\n";
+		int terrainParts = (hitWall > 0) + (hitObject > 0) + (hitFloor > 0);
+		int shown = 0;
+		auto terrainPrefix = [&]() -> const char* { return (++shown < terrainParts) ? "|- " : "\\- "; };
+		if (hitWall > 0) left << terrainPrefix() << "Wall: " << hitWall << "\n";
+		if (hitObject > 0) left << terrainPrefix() << "Object: " << hitObject << "\n";
+		if (hitFloor > 0) left << terrainPrefix() << "Floor: " << hitFloor << "\n";
 	}
 	if (missed > 0)
 		left << "Missed: " << missed << "/" << N << "\n";
