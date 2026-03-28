@@ -890,6 +890,31 @@ void Map::drawTerrain(Surface *surface)
 				}
 			}
 		}
+
+		// Shift+0: Overwatch lanes — fan rays across view sector
+		if (_showOverwatchLanes)
+		{
+			_overwatchRays.clear();
+			Position owOrigin = _save->getTileEngine()->getSightOriginVoxel(overlayUnit);
+			double dir = ((double)overlayUnit->getDirection()) / 4.0 * M_PI;
+			for (int angle = -45; angle <= 45; angle += 5)
+			{
+				double rad = dir + angle * M_PI / 180.0;
+				int dist = 20 * 16;
+				Position targetVoxel;
+				targetVoxel.x = owOrigin.x + (int)(-sin(rad) * dist);
+				targetVoxel.y = owOrigin.y + (int)(cos(rad) * dist);
+				targetVoxel.z = owOrigin.z;
+
+				std::vector<Position> trajectory;
+				_save->getTileEngine()->calculateLineVoxel(owOrigin, targetVoxel, true, &trajectory, overlayUnit);
+
+				OverwatchRay ray;
+				ray.startVoxel = owOrigin;
+				ray.endVoxel = trajectory.empty() ? targetVoxel : trajectory.back();
+				_overwatchRays.push_back(ray);
+			}
+		}
 	}
 
 	// if we got bullet, get the highest x and y tiles to draw it on
@@ -2254,53 +2279,18 @@ void Map::drawTerrain(Surface *surface)
 		}
 	}
 
-	// Shift+0: Overwatch lanes (fan of rays in unit's view direction)
-	if (_showOverwatchLanes)
+	// Shift+0: Overwatch lanes — render cached rays
+	if (_showOverwatchLanes && !_overwatchRays.empty())
 	{
-		BattleUnit *selectedUnit = _save->getSelectedUnit();
-		if (selectedUnit)
+		for (const auto &ray : _overwatchRays)
 		{
-			// Rebuild cache if needed
-			if (_overlayCacheDirty || _cachedOverlayUnit != selectedUnit || _cachedOverlayDir != selectedUnit->getDirection())
-			{
-				_overwatchRays.clear();
-				_cachedOverlayUnit = selectedUnit;
-				_cachedOverlayDir = selectedUnit->getDirection();
-
-				Position originVoxel = _save->getTileEngine()->getSightOriginVoxel(selectedUnit);
-				double dir = ((double)selectedUnit->getDirection()) / 4.0 * M_PI;
-				// Fan rays across ~90 degree arc at 5-degree increments
-				for (int angle = -45; angle <= 45; angle += 5)
-				{
-					double rad = dir + angle * M_PI / 180.0;
-					int dist = 20 * 16; // 20 tiles in voxels
-					Position targetVoxel;
-					targetVoxel.x = originVoxel.x + (int)(-sin(rad) * dist);
-					targetVoxel.y = originVoxel.y + (int)(cos(rad) * dist);
-					targetVoxel.z = originVoxel.z;
-
-					std::vector<Position> trajectory;
-					_save->getTileEngine()->calculateLineVoxel(originVoxel, targetVoxel, true, &trajectory, selectedUnit);
-
-					OverwatchRay ray;
-					ray.startVoxel = originVoxel;
-					ray.endVoxel = trajectory.empty() ? targetVoxel : trajectory.back();
-					_overwatchRays.push_back(ray);
-				}
-			}
-
-			// Draw cached rays
-			for (const auto &ray : _overwatchRays)
-			{
-				Position s1, s2;
-				_camera->convertVoxelToScreen(ray.startVoxel, &s1);
-				_camera->convertVoxelToScreen(ray.endVoxel, &s2);
-				surface->drawLine(s1.x, s1.y, s2.x, s2.y, 48); // green
-				// Red cross at termination
-				surface->drawLine(s2.x - 2, s2.y - 2, s2.x + 2, s2.y + 2, 32);
-				surface->drawLine(s2.x + 2, s2.y - 2, s2.x - 2, s2.y + 2, 32);
-			}
-			_overlayCacheDirty = false;
+			Position s1, s2;
+			_camera->convertVoxelToScreen(ray.startVoxel, &s1);
+			_camera->convertVoxelToScreen(ray.endVoxel, &s2);
+			surface->drawLine(s1.x, s1.y, s2.x, s2.y, 48); // green
+			// Red cross at termination
+			surface->drawLine(s2.x - 2, s2.y - 2, s2.x + 2, s2.y + 2, 32);
+			surface->drawLine(s2.x + 2, s2.y - 2, s2.x - 2, s2.y + 2, 32);
 		}
 	}
 }
