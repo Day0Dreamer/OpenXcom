@@ -1971,6 +1971,7 @@ void Map::drawTerrain(Surface *surface)
 
 			for (auto *enemy : *selectedUnit->getVisibleUnits())
 			{
+				if (!enemy->getTile()) continue;
 				std::vector<Position> trajectory;
 				Position targetVoxel;
 				if (_save->getTileEngine()->canTargetUnit(&originVoxel, enemy->getTile(), &targetVoxel, selectedUnit, false, enemy))
