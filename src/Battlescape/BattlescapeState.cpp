@@ -3174,7 +3174,19 @@ inline void BattlescapeState::handle(Action *action)
 					_map->toggleCrossfire();
 					_txtTooltip->setText(_map->getShowCrossfire() ? "Crossfire enabled: hover over enemy" : "Crossfire disabled");
 				}
-				// "o" - overwatch lanes
+				// "ctrl-shift-o" - all enemy overwatch lanes (cheat)
+				else if (key == SDLK_o && ctrlPressed && shiftPressed)
+				{
+					_map->toggleAllEnemyOverwatch();
+					_txtTooltip->setText(_map->getShowAllEnemyOverwatch() ? "All enemy overwatch enabled" : "All enemy overwatch disabled");
+				}
+				// "shift-o" - visible enemy overwatch lanes
+				else if (key == SDLK_o && shiftPressed)
+				{
+					_map->toggleEnemyOverwatch();
+					_txtTooltip->setText(_map->getShowEnemyOverwatch() ? "Enemy overwatch enabled" : "Enemy overwatch disabled");
+				}
+				// "o" - friendly overwatch lanes
 				else if (key == SDLK_o)
 				{
 					_map->toggleOverwatchLanes();

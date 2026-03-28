@@ -122,11 +122,14 @@ private:
 	bool _showCorridorOfFire;
 	bool _showCrossfire;
 	bool _showOverwatchLanes;
+	bool _showEnemyOverwatch;
+	bool _showAllEnemyOverwatch;
 	// Overlay caches for tile-level modes
 	std::unordered_set<Tile*> _corridorTiles;
 	// Overwatch lane cache: pairs of (start screen pos, end screen pos)
 	struct OverwatchRay { Position startVoxel; Position endVoxel; };
 	std::vector<OverwatchRay> _overwatchRays;
+	std::vector<OverwatchRay> _enemyOverwatchRays;
 	bool _overlayCacheDirty;
 	BattleUnit* _cachedOverlayUnit;
 	int _cachedOverlayDir;
@@ -254,6 +257,10 @@ public:
 	bool getShowCrossfire() const { return _showCrossfire; }
 	void toggleOverwatchLanes();
 	bool getShowOverwatchLanes() const { return _showOverwatchLanes; }
+	void toggleEnemyOverwatch();
+	bool getShowEnemyOverwatch() const { return _showEnemyOverwatch; }
+	void toggleAllEnemyOverwatch();
+	bool getShowAllEnemyOverwatch() const { return _showAllEnemyOverwatch; }
 	/// Invalidate overlay caches (call on unit change/move/turn boundary).
 	void invalidateOverlayCache();
 };

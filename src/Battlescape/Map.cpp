@@ -111,7 +111,7 @@ Map::Map(Game *game, int width, int height, int x, int y, int visibleMapHeight) 
 	_unitDying(false), _smoothingEngaged(false), _flashScreen(false), _bgColor(15), _projectileSet(0),
 	_showObstacles(false), _showUnitFOV(false), _showLOSTrajectories(false),
 	_showCoverQuality(false), _showBlockedLOS(false), _showHitProbability(false),
-	_showCorridorOfFire(false), _showCrossfire(false), _showOverwatchLanes(false), _overlayCacheDirty(true), _cachedOverlayUnit(nullptr),
+	_showCorridorOfFire(false), _showCrossfire(false), _showOverwatchLanes(false), _showEnemyOverwatch(false), _showAllEnemyOverwatch(false), _overlayCacheDirty(true), _cachedOverlayUnit(nullptr),
 	_cachedOverlayDir(-1), _showInfoOnCursor(false)
 {
 	// TODO: extract to a better place later
@@ -812,6 +812,55 @@ void Map::drawTerrain(Surface *surface)
 				ray.startVoxel = owOrigin;
 				ray.endVoxel = trajectory.empty() ? targetVoxel : trajectory.back();
 				_overwatchRays.push_back(ray);
+			}
+		}
+	}
+
+	// Enemy overwatch precompute (doesn't require selected unit for Ctrl+Shift+O)
+	if ((_showEnemyOverwatch || _showAllEnemyOverwatch) && (_overlayCacheDirty || _enemyOverwatchRays.empty()))
+	{
+		_enemyOverwatchRays.clear();
+		std::vector<BattleUnit*> enemies;
+
+		if (_showAllEnemyOverwatch)
+		{
+			// All enemies (cheat mode)
+			for (auto *unit : *_save->getUnits())
+			{
+				if (unit->getFaction() == FACTION_HOSTILE && !unit->isOut() && unit->getTile())
+					enemies.push_back(unit);
+			}
+		}
+		else if (overlayUnit)
+		{
+			// Only visible enemies
+			for (auto *unit : *overlayUnit->getVisibleUnits())
+			{
+				if (unit->getTile())
+					enemies.push_back(unit);
+			}
+		}
+
+		for (auto *enemy : enemies)
+		{
+			Position enemyOrigin = _save->getTileEngine()->getSightOriginVoxel(enemy);
+			double dir = ((double)enemy->getDirection() + 4) / 4.0 * M_PI;
+			for (int angle = -45; angle <= 45; angle += 5)
+			{
+				double rad = dir + angle * M_PI / 180.0;
+				int dist = 20 * 16;
+				Position targetVoxel;
+				targetVoxel.x = enemyOrigin.x + (int)(-sin(rad) * dist);
+				targetVoxel.y = enemyOrigin.y + (int)(cos(rad) * dist);
+				targetVoxel.z = enemyOrigin.z;
+
+				std::vector<Position> trajectory;
+				_save->getTileEngine()->calculateLineVoxel(enemyOrigin, targetVoxel, true, &trajectory, enemy);
+
+				OverwatchRay ray;
+				ray.startVoxel = enemyOrigin;
+				ray.endVoxel = trajectory.empty() ? targetVoxel : trajectory.back();
+				_enemyOverwatchRays.push_back(ray);
 			}
 		}
 	}
@@ -2090,7 +2139,7 @@ void Map::drawTerrain(Surface *surface)
 		}
 	}
 
-	// Shift+0: Overwatch lanes — render cached rays
+	// O: Overwatch lanes — render cached rays (green, friendly)
 	if (_showOverwatchLanes && !_overwatchRays.empty())
 	{
 		for (const auto &ray : _overwatchRays)
@@ -2099,7 +2148,20 @@ void Map::drawTerrain(Surface *surface)
 			_camera->convertVoxelToScreen(ray.startVoxel, &s1);
 			_camera->convertVoxelToScreen(ray.endVoxel, &s2);
 			surface->drawLine(s1.x, s1.y, s2.x, s2.y, 48); // green
-			// Red cross at termination
+			surface->drawLine(s2.x - 2, s2.y - 2, s2.x + 2, s2.y + 2, 32);
+			surface->drawLine(s2.x + 2, s2.y - 2, s2.x - 2, s2.y + 2, 32);
+		}
+	}
+
+	// Shift+O / Ctrl+Shift+O: Enemy overwatch lanes (red)
+	if ((_showEnemyOverwatch || _showAllEnemyOverwatch) && !_enemyOverwatchRays.empty())
+	{
+		for (const auto &ray : _enemyOverwatchRays)
+		{
+			Position s1, s2;
+			_camera->convertVoxelToScreen(ray.startVoxel, &s1);
+			_camera->convertVoxelToScreen(ray.endVoxel, &s2);
+			surface->drawLine(s1.x, s1.y, s2.x, s2.y, 32); // red
 			surface->drawLine(s2.x - 2, s2.y - 2, s2.x + 2, s2.y + 2, 32);
 			surface->drawLine(s2.x + 2, s2.y - 2, s2.x - 2, s2.y + 2, 32);
 		}
@@ -2912,12 +2974,15 @@ void Map::toggleHitProbability() { _showHitProbability = !_showHitProbability; }
 void Map::toggleCorridorOfFire() { _showCorridorOfFire = !_showCorridorOfFire; invalidateOverlayCache(); }
 void Map::toggleCrossfire() { _showCrossfire = !_showCrossfire; }
 void Map::toggleOverwatchLanes() { _showOverwatchLanes = !_showOverwatchLanes; invalidateOverlayCache(); }
+void Map::toggleEnemyOverwatch() { _showEnemyOverwatch = !_showEnemyOverwatch; invalidateOverlayCache(); }
+void Map::toggleAllEnemyOverwatch() { _showAllEnemyOverwatch = !_showAllEnemyOverwatch; invalidateOverlayCache(); }
 
 void Map::invalidateOverlayCache()
 {
 	_overlayCacheDirty = true;
 	_corridorTiles.clear();
 	_overwatchRays.clear();
+	_enemyOverwatchRays.clear();
 }
 
 }
