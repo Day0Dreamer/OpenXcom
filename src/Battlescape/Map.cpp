@@ -896,7 +896,7 @@ void Map::drawTerrain(Surface *surface)
 		{
 			_overwatchRays.clear();
 			Position owOrigin = _save->getTileEngine()->getSightOriginVoxel(overlayUnit);
-			double dir = ((double)overlayUnit->getDirection()) / 4.0 * M_PI;
+			double dir = ((double)overlayUnit->getDirection() + 4) / 4.0 * M_PI;
 			for (int angle = -45; angle <= 45; angle += 5)
 			{
 				double rad = dir + angle * M_PI / 180.0;
