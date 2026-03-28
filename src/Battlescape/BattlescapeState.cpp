@@ -36,6 +36,7 @@
 #include "BattlescapeGame.h"
 #include "WarningMessage.h"
 #include "InfoboxState.h"
+#include "HotkeyHelpState.h"
 #include "InfoboxOKState.h"
 #include "Projectile.h"
 #include "NoExperienceState.h"
@@ -3192,7 +3193,12 @@ inline void BattlescapeState::handle(Action *action)
 					_map->toggleOverwatchLanes();
 					_txtTooltip->setText(_map->getShowOverwatchLanes() ? "Overwatch lanes enabled" : "Overwatch lanes disabled");
 				}
-				// "ctrl-shift-Del" - clear TUs for all allied units
+				// "shift-/" - hotkey help
+			else if (key == SDLK_SLASH && shiftPressed)
+			{
+				_game->pushState(new HotkeyHelpState());
+			}
+			// "ctrl-shift-Del" - clear TUs for all allied units
 				else if (key == SDLK_DELETE && ctrlPressed && shiftPressed)
 				{
 					for (auto* bu : *_save->getUnits())
