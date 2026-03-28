@@ -433,6 +433,7 @@
     <ClCompile Include="Battlescape\ExplosionBState.cpp" />
     <ClCompile Include="Battlescape\ExtendedBattlescapeLinksState.cpp" />
     <ClCompile Include="Battlescape\ExtendedInventoryLinksState.cpp" />
+    <ClCompile Include="Battlescape\HotkeyHelpState.cpp" />
     <ClCompile Include="Battlescape\InfoboxOKState.cpp" />
     <ClCompile Include="Battlescape\InfoboxState.cpp" />
     <ClCompile Include="Battlescape\Inventory.cpp" />
@@ -496,6 +497,7 @@
     <ClCompile Include="Engine\OptionInfo.cpp" />
     <ClCompile Include="Engine\Options.cpp" />
     <ClCompile Include="Engine\Palette.cpp" />
+    <ClCompile Include="Engine\RemoteServer.cpp" />
     <ClCompile Include="Engine\RNG.cpp" />
     <ClCompile Include="Engine\Scalers\hq2x.cpp" />
     <ClCompile Include="Engine\Scalers\hq3x.cpp" />
@@ -910,6 +912,7 @@
     <ClInclude Include="Battlescape\ExplosionBState.h" />
     <ClInclude Include="Battlescape\ExtendedBattlescapeLinksState.h" />
     <ClInclude Include="Battlescape\ExtendedInventoryLinksState.h" />
+    <ClInclude Include="Battlescape\HotkeyHelpState.h" />
     <ClInclude Include="Battlescape\InfoboxOKState.h" />
     <ClInclude Include="Battlescape\InfoboxState.h" />
     <ClInclude Include="Battlescape\Inventory.h" />
@@ -980,6 +983,7 @@
     <ClInclude Include="Engine\Options.h" />
     <ClInclude Include="Engine\Options.inc.h" />
     <ClInclude Include="Engine\Palette.h" />
+    <ClInclude Include="Engine\RemoteServer.h" />
     <ClInclude Include="Engine\RNG.h" />
     <ClInclude Include="Engine\Scalers\common.h" />
     <ClInclude Include="Engine\Scalers\config.h" />
