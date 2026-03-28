@@ -831,13 +831,17 @@ void Map::drawTerrain(Surface *surface)
 					enemies.push_back(unit);
 			}
 		}
-		else if (overlayUnit)
+		else
 		{
 			// Only visible enemies
-			for (auto *unit : *overlayUnit->getVisibleUnits())
+			BattleUnit *selUnit = _save->getSelectedUnit();
+			if (selUnit)
 			{
-				if (unit->getTile())
-					enemies.push_back(unit);
+				for (auto *unit : *selUnit->getVisibleUnits())
+				{
+					if (unit->getTile() && unit->getFaction() == FACTION_HOSTILE)
+						enemies.push_back(unit);
+				}
 			}
 		}
 
