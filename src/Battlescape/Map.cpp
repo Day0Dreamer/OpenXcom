@@ -2111,7 +2111,7 @@ void Map::drawTerrain(Surface *surface)
 			Position hoveredPos(_selectorX, _selectorY, _camera->getViewLevel());
 			Tile *hoveredTile = _save->getTile(hoveredPos);
 			BattleUnit *hoveredEnemy = hoveredTile ? hoveredTile->getUnit() : nullptr;
-			if (hoveredEnemy && hoveredEnemy->getFaction() == FACTION_HOSTILE && !hoveredEnemy->isOut())
+			if (hoveredEnemy && hoveredEnemy->getFaction() == FACTION_HOSTILE && !hoveredEnemy->isOut() && hoveredEnemy->getTile())
 			{
 				for (auto *soldier : *_save->getUnits())
 				{
